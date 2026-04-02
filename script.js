@@ -687,10 +687,10 @@ function getWeatherEmoji(code) {
     if (code <= 55) return '🌦️';
     if (code <= 65) return '🌧️';
     if (code <= 77) return '🌨️';
-    if (code <= 82 return '🌧️';
-    icode <= 86) return '🌨️';
+    if (code <= 82) return '🌧️';
+    if (code <= 86) return '🌨️';
     if (code >= 95) return '⛈️';
-   return '🌤️';
+    return '🌤️';
 }
 
 // ===== HISTORY =====
@@ -758,7 +758,7 @@ function renderHistory() {
             hour: '2-digit', minute: '2-digit'
         });
 
-        cost jitterHtml = result.jitter !== undefined
+        const jitterHtml = result.jitter !== undefined
             ? `<div class="history-stat">
                     <span class="history-stat-label">Jitter</span>
                     <span class="history-stat-value jitter-val">${result.jitter.toFixed(1)}</span>
