@@ -1,4 +1,4 @@
-// ===== NetPulse Real Speed Test =====
+// ===== NetPulse Real Speed Test - FIXED =====
 
 document.addEventListener('DOMContentLoaded', function () {
     initClock();
@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', function () {
     initGauge();
     initSpeedTest();
     initHistory();
+
+    // Start weather immediately with timezone fallback (don't wait for IP)
+    startWeatherFallback();
+
+    // Then try IP detection (will update weather if better coords found)
     fetchIPInfo();
 });
 
@@ -588,88 +593,53 @@ async function runSpeedTest() {
     startBtn.querySelector('.start-btn-text').textContent = 'START TEST';
 }
 
-// ===== IP INFO & WEATHER (FIXED with multiple CORS-friendly fallbacks) =====
+// ===== IP INFO & WEATHER (FULLY FIXED) =====
+
+// Track if weather has been loaded with good coords
+let weatherLoadedWithCoords = false;
 
 // Helper: fetch with timeout
 function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-    return Promise.race([
-        fetch(url, options),
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
-        )
-    ]);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId));
 }
 
+// Start weather immediately using timezone-based coords (don't wait for IP)
+function startWeatherFallback() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const defaults = getDefaultCoordsFromTimezone(tz);
+    fetchWeather(defaults.lat, defaults.lon, false);
+}
+
+// ===== ROBUST IP DETECTION WITH 6 FALLBACK STRATEGIES =====
 async function fetchIPInfo() {
     let ipData = null;
 
-    // Strategy 1: ipapi.co (CORS-friendly, no API key needed, supports HTTPS)
-    try {
-        const response = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
-        if (response.ok) {
-            const data = await response.json();
-            if (data && data.ip && !data.error) {
-                ipData = {
-                    ip: data.ip,
-                    isp: data.org || 'Unknown',
-                    city: data.city || '--',
-                    country: data.country_name || '--',
-                    lat: data.latitude,
-                    lon: data.longitude,
-                    timezone: data.timezone
-                };
-            }
-        }
-    } catch (e) {
-        console.warn('ipapi.co failed:', e.message);
-    }
-
-    // Strategy 2: ipwho.is (CORS-friendly, no API key needed)
-    if (!ipData) {
-        try {
-            const response = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.success !== false && data.ip) {
-                    ipData = {
-                        ip: data.ip,
-                        isp: data.connection ? data.connection.isp : 'Unknown',
-                        city: data.city || '--',
-                        country: data.country || '--',
-                        lat: data.latitude,
-                        lon: data.longitude,
-                        timezone: data.timezone ? data.timezone.id : null
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('ipwho.is failed:', e.message);
-        }
-    }
-
-    // Strategy 3: Cloudflare trace (always works, but limited info - IP only)
+    // Strategy 1: Cloudflare trace (most reliable, always works, no CORS issues)
     if (!ipData) {
         try {
             const response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
             if (response.ok) {
                 const text = await response.text();
-                const lines = text.split('\n');
                 const cfData = {};
-                lines.forEach(line => {
-                    const parts = line.split('=');
-                    if (parts.length === 2) {
-                        cfData[parts[0].trim()] = parts[1].trim();
+                text.split('\n').forEach(line => {
+                    const idx = line.indexOf('=');
+                    if (idx > 0) {
+                        cfData[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
                     }
                 });
                 if (cfData.ip) {
                     ipData = {
                         ip: cfData.ip,
-                        isp: 'Unknown',
-                        city: cfData.loc || '--',
-                        country: cfData.loc || '--',
+                        isp: null,
+                        city: null,
+                        country: cfData.loc || null,
                         lat: null,
                         lon: null,
-                        timezone: null
+                        timezone: null,
+                        partial: true
                     };
                 }
             }
@@ -678,8 +648,80 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 4: ip-api.com (may fail on HTTPS but try anyway as last resort)
+    // Strategy 2: ipapi.co (CORS-friendly, full info)
+    if (!ipData || ipData.partial) {
+        try {
+            const response = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.ip && !data.error && !data.reason) {
+                    ipData = {
+                        ip: data.ip,
+                        isp: data.org || 'Unknown',
+                        city: data.city || null,
+                        country: data.country_name || null,
+                        lat: data.latitude,
+                        lon: data.longitude,
+                        timezone: data.timezone,
+                        partial: false
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('ipapi.co failed:', e.message);
+        }
+    }
+
+    // Strategy 3: ipwho.is (CORS-friendly, full info)
+    if (!ipData || ipData.partial) {
+        try {
+            const response = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.success !== false && data.ip) {
+                    ipData = {
+                        ip: data.ip,
+                        isp: data.connection ? data.connection.isp : 'Unknown',
+                        city: data.city || null,
+                        country: data.country || null,
+                        lat: data.latitude,
+                        lon: data.longitude,
+                        timezone: data.timezone ? data.timezone.id : null,
+                        partial: false
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('ipwho.is failed:', e.message);
+        }
+    }
+
+    // Strategy 4: ipify.org (simple IP only, very reliable)
     if (!ipData) {
+        try {
+            const response = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.ip) {
+                    ipData = {
+                        ip: data.ip,
+                        isp: null,
+                        city: null,
+                        country: null,
+                        lat: null,
+                        lon: null,
+                        timezone: null,
+                        partial: true
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('ipify.org failed:', e.message);
+        }
+    }
+
+    // Strategy 5: ip-api.com (may have CORS issues on HTTPS but try)
+    if (!ipData || ipData.partial) {
         try {
             const response = await fetchWithTimeout(
                 'https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone',
@@ -692,11 +734,12 @@ async function fetchIPInfo() {
                     ipData = {
                         ip: data.query,
                         isp: data.isp || 'Unknown',
-                        city: data.city || '--',
-                        country: data.country || '--',
+                        city: data.city || null,
+                        country: data.country || null,
                         lat: data.lat,
                         lon: data.lon,
-                        timezone: data.timezone
+                        timezone: data.timezone,
+                        partial: false
                     };
                 }
             }
@@ -705,50 +748,73 @@ async function fetchIPInfo() {
         }
     }
 
+    // Strategy 6: freeipapi.com (another CORS-friendly option)
+    if (!ipData || ipData.partial) {
+        try {
+            const response = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.ipAddress) {
+                    ipData = {
+                        ip: data.ipAddress,
+                        isp: data.isp || ipData?.isp || 'Unknown',
+                        city: data.cityName || ipData?.city || null,
+                        country: data.countryName || ipData?.country || null,
+                        lat: data.latitude || ipData?.lat,
+                        lon: data.longitude || ipData?.lon,
+                        timezone: data.timeZone || ipData?.timezone,
+                        partial: false
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('freeipapi.com failed:', e.message);
+        }
+    }
+
     // Update UI with whatever we got
     if (ipData) {
         document.getElementById('ipAddress').textContent = ipData.ip;
-        document.getElementById('ipISP').textContent = `ISP: ${ipData.isp}`;
-        document.getElementById('ipLocation').textContent = `${ipData.city}, ${ipData.country}`;
-        document.getElementById('serverName').textContent = `Cloudflare CDN (${ipData.city !== '--' ? ipData.city : 'Auto'})`;
+        document.getElementById('ipISP').textContent = `ISP: ${ipData.isp || 'Unknown'}`;
 
-        // Fetch weather if we have coordinates
-        if (ipData.lat && ipData.lon) {
-            fetchWeather(ipData.lat, ipData.lon);
-        } else {
-            // Try to get coordinates from browser geolocation API as fallback
-            fetchWeatherWithGeoFallback();
+        const city = ipData.city || '--';
+        const country = ipData.country || '--';
+        document.getElementById('ipLocation').textContent = city !== '--' || country !== '--'
+            ? `${city}, ${country}`
+            : 'Location: --';
+
+        document.getElementById('serverName').textContent = `Cloudflare CDN (${city !== '--' ? city : 'Auto'})`;
+
+        // Update weather with better coordinates if available
+        if (ipData.lat && ipData.lon && !weatherLoadedWithCoords) {
+            fetchWeather(ipData.lat, ipData.lon, true);
         }
     } else {
-        document.getElementById('ipAddress').textContent = 'Unavailable';
+        // All strategies failed - show IP as unavailable but don't leave it stuck on "Detecting..."
+        document.getElementById('ipAddress').textContent = 'Could not detect';
         document.getElementById('ipISP').textContent = 'ISP: --';
         document.getElementById('ipLocation').textContent = 'Location: --';
-        // Still try to get weather via geolocation
-        fetchWeatherWithGeoFallback();
+
+        // Try browser geolocation for weather as last resort
+        tryBrowserGeolocation();
     }
 }
 
-// Fallback: use browser Geolocation API or default coords for weather
-function fetchWeatherWithGeoFallback() {
+// Try browser geolocation API for weather coordinates
+function tryBrowserGeolocation() {
     if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                fetchWeather(position.coords.latitude, position.coords.longitude);
+                if (!weatherLoadedWithCoords) {
+                    fetchWeather(position.coords.latitude, position.coords.longitude, true);
+                }
             },
             () => {
-                // If geolocation denied/failed, use a default location
-                // Use timezone to guess a reasonable default
-                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const defaults = getDefaultCoordsFromTimezone(tz);
-                fetchWeather(defaults.lat, defaults.lon);
+                // Geolocation denied/failed - weather fallback already running from startWeatherFallback()
+                console.warn('Geolocation denied or failed');
             },
             { timeout: 5000 }
         );
-    } else {
-        // No geolocation support, use default
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const defaults = getDefaultCoordsFromTimezone(tz);
-        fetchWeather(defaults.lat, defaults.lon);
     }
 }
 
@@ -758,24 +824,36 @@ function getDefaultCoordsFromTimezone(tz) {
         'Asia/Jakarta': { lat: -6.2, lon: 106.8 },
         'Asia/Makassar': { lat: -5.1, lon: 119.4 },
         'Asia/Jayapura': { lat: -2.5, lon: 140.7 },
+        'Asia/Pontianak': { lat: -0.02, lon: 109.3 },
         'Asia/Singapore': { lat: 1.35, lon: 103.8 },
         'Asia/Kuala_Lumpur': { lat: 3.1, lon: 101.7 },
         'Asia/Bangkok': { lat: 13.7, lon: 100.5 },
+        'Asia/Ho_Chi_Minh': { lat: 10.8, lon: 106.6 },
+        'Asia/Manila': { lat: 14.6, lon: 121.0 },
         'Asia/Tokyo': { lat: 35.7, lon: 139.7 },
         'Asia/Seoul': { lat: 37.6, lon: 127.0 },
         'Asia/Shanghai': { lat: 31.2, lon: 121.5 },
+        'Asia/Hong_Kong': { lat: 22.3, lon: 114.2 },
+        'Asia/Taipei': { lat: 25.0, lon: 121.5 },
         'Asia/Kolkata': { lat: 28.6, lon: 77.2 },
         'Asia/Dubai': { lat: 25.2, lon: 55.3 },
+        'Asia/Riyadh': { lat: 24.7, lon: 46.7 },
         'Europe/London': { lat: 51.5, lon: -0.1 },
         'Europe/Paris': { lat: 48.9, lon: 2.3 },
         'Europe/Berlin': { lat: 52.5, lon: 13.4 },
+        'Europe/Moscow': { lat: 55.8, lon: 37.6 },
+        'Europe/Istanbul': { lat: 41.0, lon: 29.0 },
         'America/New_York': { lat: 40.7, lon: -74.0 },
         'America/Chicago': { lat: 41.9, lon: -87.6 },
         'America/Denver': { lat: 39.7, lon: -105.0 },
         'America/Los_Angeles': { lat: 34.1, lon: -118.2 },
         'America/Sao_Paulo': { lat: -23.5, lon: -46.6 },
+        'America/Mexico_City': { lat: 19.4, lon: -99.1 },
         'Australia/Sydney': { lat: -33.9, lon: 151.2 },
+        'Australia/Melbourne': { lat: -37.8, lon: 145.0 },
         'Pacific/Auckland': { lat: -36.8, lon: 174.8 },
+        'Africa/Cairo': { lat: 30.0, lon: 31.2 },
+        'Africa/Lagos': { lat: 6.5, lon: 3.4 },
     };
 
     if (tz && tzCoords[tz]) {
@@ -793,13 +871,19 @@ function getDefaultCoordsFromTimezone(tz) {
     return { lat: -6.2, lon: 106.8 };
 }
 
-async function fetchWeather(lat, lon) {
+async function fetchWeather(lat, lon, isAccurateCoords) {
+    // If we already have weather from accurate coords, don't overwrite with fallback
+    if (weatherLoadedWithCoords && !isAccurateCoords) return;
+
     try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
         const response = await fetchWithTimeout(url, {}, 8000);
+
+        if (!response.ok) throw new Error(`Weather API returned ${response.status}`);
+
         const data = await response.json();
 
-        if (data.current) {
+        if (data && data.current) {
             const temp = data.current.temperature_2m;
             const humidity = data.current.relative_humidity_2m;
             const windSpeed = data.current.wind_speed_10m;
@@ -816,14 +900,21 @@ async function fetchWeather(lat, lon) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
                 ${windSpeed} km/h
             `;
+
+            if (isAccurateCoords) {
+                weatherLoadedWithCoords = true;
+            }
         } else {
-            document.getElementById('weatherDesc').textContent = 'Weather unavailable';
-            document.getElementById('weatherEmoji').textContent = '❓';
+            throw new Error('No current weather data in response');
         }
     } catch (err) {
         console.error('Weather fetch error:', err);
-        document.getElementById('weatherDesc').textContent = 'Weather unavailable';
-        document.getElementById('weatherEmoji').textContent = '❓';
+        // Only show error if we haven't loaded weather yet
+        if (!weatherLoadedWithCoords) {
+            document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+            document.getElementById('weatherEmoji').textContent = '❓';
+            document.getElementById('weatherTemp').textContent = '--°C';
+        }
     }
 }
 
@@ -832,7 +923,9 @@ function getWeatherDescription(code) {
         0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
         45: 'Foggy', 48: 'Depositing rime fog',
         51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+        56: 'Freezing drizzle', 57: 'Dense freezing drizzle',
         61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+        66: 'Freezing rain', 67: 'Heavy freezing rain',
         71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
         77: 'Snow grains', 80: 'Slight rain showers', 81: 'Moderate rain showers',
         82: 'Violent rain showers', 85: 'Slight snow showers', 86: 'Heavy snow showers',
@@ -846,17 +939,17 @@ function getWeatherEmoji(code) {
     if (code <= 2) return '⛅';
     if (code === 3) return '☁️';
     if (code <= 48) return '🌫️';
-    if (code <= 55) return '🌦️';
-    if (code <= 65) return '🌧️';
+    if (code <= 57) return '🌦️';
+    if (code <= 67) return '🌧️';
     if (code <= 77) return '🌨️';
-    if (code <= 82) return '🌧️';
-    if (code <= 86) return '🌨️';
+    if (code <= 82 return '🌧️';
+    icode <= 86) return '🌨️';
     if (code >= 95) return '⛈️';
-    return '🌤️';
+   return '🌤️';
 }
 
 // ===== HISTORY =====
-const HISTORY_KEY = 'netpulse-history';
+const HISTORY_EY = 'netpulse-history';
 
 function initHistory() {
     const historyBtn = document.getElementById('historyBtn');
