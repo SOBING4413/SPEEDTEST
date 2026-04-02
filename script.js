@@ -282,7 +282,6 @@ function initSpeedTest() {
 }
 
 // --- Real Ping Test ---
-// Measures actual HTTP round-trip time to Cloudflare's edge
 async function realPingTest() {
     const url = 'https://www.cloudflare.com/cdn-cgi/trace';
     const pings = [];
@@ -304,12 +303,9 @@ async function realPingTest() {
             const end = performance.now();
             const latency = end - start;
             pings.push(latency);
-
-            // Update gauge in realtime
             setGaugeValue(latency, 200);
             document.getElementById('gaugeValue').textContent = latency.toFixed(1);
         } catch (e) {
-            // If CORS fails, try with no-cors (less accurate but works)
             try {
                 const cacheBuster = `?cb=${Date.now()}-${Math.random()}`;
                 const start = performance.now();
@@ -326,7 +322,6 @@ async function realPingTest() {
                 // skip failed ping
             }
         }
-        // Small delay between pings
         await sleep(100);
     }
 
@@ -334,14 +329,12 @@ async function realPingTest() {
         return { ping: 0, jitter: 0 };
     }
 
-    // Remove outliers (top and bottom 10%)
     pings.sort((a, b) => a - b);
     const trimCount = Math.floor(pings.length * 0.1);
     const trimmedPings = pings.slice(trimCount, pings.length - trimCount);
 
     const avgPing = trimmedPings.reduce((a, b) => a + b, 0) / trimmedPings.length;
 
-    // Calculate jitter (average difference between consecutive pings)
     let jitterSum = 0;
     for (let i = 1; i < trimmedPings.length; i++) {
         jitterSum += Math.abs(trimmedPings[i] - trimmedPings[i - 1]);
@@ -352,27 +345,24 @@ async function realPingTest() {
 }
 
 // --- Real Download Speed Test ---
-// Downloads data from Cloudflare's speed test endpoint and measures throughput
 async function realDownloadTest() {
     document.getElementById('gaugeLabel').textContent = 'Download';
     document.getElementById('gaugeUnit').textContent = 'Mbps';
     setPhase('download');
 
-    // Use multiple file sizes for progressive testing
-    // Cloudflare speed test uses their __down endpoint
     const testSizes = [
-        { size: 1e5, label: '100KB' },    // 100KB warmup
-        { size: 1e6, label: '1MB' },      // 1MB
-        { size: 5e6, label: '5MB' },      // 5MB
-        { size: 10e6, label: '10MB' },    // 10MB
-        { size: 25e6, label: '25MB' },    // 25MB
+        { size: 1e5, label: '100KB' },
+        { size: 1e6, label: '1MB' },
+        { size: 5e6, label: '5MB' },
+        { size: 10e6, label: '10MB' },
+        { size: 25e6, label: '25MB' },
     ];
 
     let totalBytes = 0;
     let totalTime = 0;
     let currentSpeed = 0;
     const speedSamples = [];
-    const testDuration = 10000; // 10 seconds max
+    const testDuration = 10000;
     const startTime = performance.now();
 
     for (const test of testSizes) {
@@ -394,10 +384,9 @@ async function realDownloadTest() {
                 if (done) break;
 
                 receivedBytes += value.length;
-                const elapsed = (performance.now() - fetchStart) / 1000; // seconds
+                const elapsed = (performance.now() - fetchStart) / 1000;
 
                 if (elapsed > 0) {
-                    // Calculate current speed in Mbps
                     currentSpeed = (receivedBytes * 8) / (elapsed * 1e6);
                     setGaugeValue(currentSpeed);
                     document.getElementById('gaugeValue').textContent = currentSpeed.toFixed(1);
@@ -414,14 +403,12 @@ async function realDownloadTest() {
                 totalTime += duration;
             }
 
-            // Run larger tests multiple times if connection is fast
             if (currentSpeed > 100 && test.size < 25e6) {
-                continue; // Skip to larger file
+                continue;
             }
 
         } catch (e) {
             console.warn('Download test chunk failed:', e);
-            // Try alternative download source
             try {
                 const altUrl = `https://speed.cloudflare.com/__down?bytes=${Math.min(test.size, 1e6)}&cacheBuster=${Date.now()}-alt`;
                 const fetchStart = performance.now();
@@ -444,18 +431,15 @@ async function realDownloadTest() {
         }
     }
 
-    // If we got samples, calculate weighted average
     if (speedSamples.length > 0) {
-        // Remove lowest sample (warmup) if we have enough
         if (speedSamples.length > 2) {
             speedSamples.sort((a, b) => a - b);
-            speedSamples.shift(); // remove lowest
+            speedSamples.shift();
         }
         const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
         return avgSpeed;
     }
 
-    // Fallback: calculate from total
     if (totalTime > 0) {
         return (totalBytes * 8) / (totalTime * 1e6);
     }
@@ -464,32 +448,29 @@ async function realDownloadTest() {
 }
 
 // --- Real Upload Speed Test ---
-// Uploads data to Cloudflare's speed test endpoint and measures throughput
 async function realUploadTest() {
     document.getElementById('gaugeLabel').textContent = 'Upload';
     document.getElementById('gaugeUnit').textContent = 'Mbps';
     setPhase('upload');
 
     const testSizes = [
-        1e5,   // 100KB warmup
-        5e5,   // 500KB
-        1e6,   // 1MB
-        2e6,   // 2MB
-        5e6,   // 5MB
+        1e5,
+        5e5,
+        1e6,
+        2e6,
+        5e6,
     ];
 
     const speedSamples = [];
-    const testDuration = 10000; // 10 seconds max
+    const testDuration = 10000;
     const startTime = performance.now();
 
     for (const size of testSizes) {
         if (performance.now() - startTime > testDuration) break;
 
         try {
-            // Generate random data to upload
             const data = new ArrayBuffer(size);
             const view = new Uint8Array(data);
-            // Fill with random-ish data (crypto.getRandomValues is slow for large buffers)
             for (let i = 0; i < Math.min(view.length, 1024); i++) {
                 view[i] = Math.floor(Math.random() * 256);
             }
@@ -504,7 +485,6 @@ async function realUploadTest() {
                 cache: 'no-store',
             });
 
-            // Read the response to ensure upload is complete
             await response.text();
             const fetchEnd = performance.now();
             const duration = (fetchEnd - fetchStart) / 1000;
@@ -518,7 +498,6 @@ async function realUploadTest() {
             }
         } catch (e) {
             console.warn('Upload test chunk failed:', e);
-            // Try with smaller payload
             try {
                 const smallSize = Math.min(size, 5e5);
                 const data = new ArrayBuffer(smallSize);
@@ -563,7 +542,6 @@ async function runSpeedTest() {
     startBtn.classList.add('testing');
     startBtn.querySelector('.start-btn-text').textContent = 'TESTING...';
 
-    // Reset results
     document.getElementById('downloadResult').textContent = '--';
     document.getElementById('uploadResult').textContent = '--';
     document.getElementById('pingResult').textContent = '--';
@@ -571,20 +549,20 @@ async function runSpeedTest() {
     resetPhases();
 
     try {
-        // Phase 1: Ping Test (real)
+        // Phase 1: Ping Test
         const { ping, jitter } = await realPingTest();
         document.getElementById('pingResult').textContent = ping.toFixed(1);
         document.getElementById('jitterResult').textContent = jitter.toFixed(1);
 
         await sleep(300);
 
-        // Phase 2: Download Test (real)
+        // Phase 2: Download Test
         const download = await realDownloadTest();
         document.getElementById('downloadResult').textContent = download.toFixed(2);
 
         await sleep(300);
 
-        // Phase 3: Upload Test (real)
+        // Phase 3: Upload Test
         const upload = await realUploadTest();
         document.getElementById('uploadResult').textContent = upload.toFixed(2);
 
@@ -610,35 +588,215 @@ async function runSpeedTest() {
     startBtn.querySelector('.start-btn-text').textContent = 'START TEST';
 }
 
-// ===== IP INFO & WEATHER =====
+// ===== IP INFO & WEATHER (FIXED with multiple CORS-friendly fallbacks) =====
+
+// Helper: fetch with timeout
+function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+    return Promise.race([
+        fetch(url, options),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+        )
+    ]);
+}
+
 async function fetchIPInfo() {
+    let ipData = null;
+
+    // Strategy 1: ipapi.co (CORS-friendly, no API key needed, supports HTTPS)
     try {
-        const response = await fetch('https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone');
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            document.getElementById('ipAddress').textContent = data.query;
-            document.getElementById('ipISP').textContent = `ISP: ${data.isp || 'Unknown'}`;
-            document.getElementById('ipLocation').textContent = `${data.city || '--'}, ${data.country || '--'}`;
-            document.getElementById('serverName').textContent = `Cloudflare CDN (${data.city || 'Auto'})`;
-
-            if (data.lat && data.lon) {
-                fetchWeather(data.lat, data.lon);
+        const response = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.ip && !data.error) {
+                ipData = {
+                    ip: data.ip,
+                    isp: data.org || 'Unknown',
+                    city: data.city || '--',
+                    country: data.country_name || '--',
+                    lat: data.latitude,
+                    lon: data.longitude,
+                    timezone: data.timezone
+                };
             }
-        } else {
-            document.getElementById('ipAddress').textContent = 'Unavailable';
         }
-    } catch (err) {
-        console.error('IP fetch error:', err);
-        document.getElementById('ipAddress').textContent = 'Unavailable';
-        fetchWeather(-6.2, 106.8);
+    } catch (e) {
+        console.warn('ipapi.co failed:', e.message);
     }
+
+    // Strategy 2: ipwho.is (CORS-friendly, no API key needed)
+    if (!ipData) {
+        try {
+            const response = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.success !== false && data.ip) {
+                    ipData = {
+                        ip: data.ip,
+                        isp: data.connection ? data.connection.isp : 'Unknown',
+                        city: data.city || '--',
+                        country: data.country || '--',
+                        lat: data.latitude,
+                        lon: data.longitude,
+                        timezone: data.timezone ? data.timezone.id : null
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('ipwho.is failed:', e.message);
+        }
+    }
+
+    // Strategy 3: Cloudflare trace (always works, but limited info - IP only)
+    if (!ipData) {
+        try {
+            const response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
+            if (response.ok) {
+                const text = await response.text();
+                const lines = text.split('\n');
+                const cfData = {};
+                lines.forEach(line => {
+                    const parts = line.split('=');
+                    if (parts.length === 2) {
+                        cfData[parts[0].trim()] = parts[1].trim();
+                    }
+                });
+                if (cfData.ip) {
+                    ipData = {
+                        ip: cfData.ip,
+                        isp: 'Unknown',
+                        city: cfData.loc || '--',
+                        country: cfData.loc || '--',
+                        lat: null,
+                        lon: null,
+                        timezone: null
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('Cloudflare trace failed:', e.message);
+        }
+    }
+
+    // Strategy 4: ip-api.com (may fail on HTTPS but try anyway as last resort)
+    if (!ipData) {
+        try {
+            const response = await fetchWithTimeout(
+                'https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone',
+                {},
+                5000
+            );
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    ipData = {
+                        ip: data.query,
+                        isp: data.isp || 'Unknown',
+                        city: data.city || '--',
+                        country: data.country || '--',
+                        lat: data.lat,
+                        lon: data.lon,
+                        timezone: data.timezone
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('ip-api.com failed:', e.message);
+        }
+    }
+
+    // Update UI with whatever we got
+    if (ipData) {
+        document.getElementById('ipAddress').textContent = ipData.ip;
+        document.getElementById('ipISP').textContent = `ISP: ${ipData.isp}`;
+        document.getElementById('ipLocation').textContent = `${ipData.city}, ${ipData.country}`;
+        document.getElementById('serverName').textContent = `Cloudflare CDN (${ipData.city !== '--' ? ipData.city : 'Auto'})`;
+
+        // Fetch weather if we have coordinates
+        if (ipData.lat && ipData.lon) {
+            fetchWeather(ipData.lat, ipData.lon);
+        } else {
+            // Try to get coordinates from browser geolocation API as fallback
+            fetchWeatherWithGeoFallback();
+        }
+    } else {
+        document.getElementById('ipAddress').textContent = 'Unavailable';
+        document.getElementById('ipISP').textContent = 'ISP: --';
+        document.getElementById('ipLocation').textContent = 'Location: --';
+        // Still try to get weather via geolocation
+        fetchWeatherWithGeoFallback();
+    }
+}
+
+// Fallback: use browser Geolocation API or default coords for weather
+function fetchWeatherWithGeoFallback() {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                fetchWeather(position.coords.latitude, position.coords.longitude);
+            },
+            () => {
+                // If geolocation denied/failed, use a default location
+                // Use timezone to guess a reasonable default
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const defaults = getDefaultCoordsFromTimezone(tz);
+                fetchWeather(defaults.lat, defaults.lon);
+            },
+            { timeout: 5000 }
+        );
+    } else {
+        // No geolocation support, use default
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const defaults = getDefaultCoordsFromTimezone(tz);
+        fetchWeather(defaults.lat, defaults.lon);
+    }
+}
+
+// Get approximate coordinates from timezone
+function getDefaultCoordsFromTimezone(tz) {
+    const tzCoords = {
+        'Asia/Jakarta': { lat: -6.2, lon: 106.8 },
+        'Asia/Makassar': { lat: -5.1, lon: 119.4 },
+        'Asia/Jayapura': { lat: -2.5, lon: 140.7 },
+        'Asia/Singapore': { lat: 1.35, lon: 103.8 },
+        'Asia/Kuala_Lumpur': { lat: 3.1, lon: 101.7 },
+        'Asia/Bangkok': { lat: 13.7, lon: 100.5 },
+        'Asia/Tokyo': { lat: 35.7, lon: 139.7 },
+        'Asia/Seoul': { lat: 37.6, lon: 127.0 },
+        'Asia/Shanghai': { lat: 31.2, lon: 121.5 },
+        'Asia/Kolkata': { lat: 28.6, lon: 77.2 },
+        'Asia/Dubai': { lat: 25.2, lon: 55.3 },
+        'Europe/London': { lat: 51.5, lon: -0.1 },
+        'Europe/Paris': { lat: 48.9, lon: 2.3 },
+        'Europe/Berlin': { lat: 52.5, lon: 13.4 },
+        'America/New_York': { lat: 40.7, lon: -74.0 },
+        'America/Chicago': { lat: 41.9, lon: -87.6 },
+        'America/Denver': { lat: 39.7, lon: -105.0 },
+        'America/Los_Angeles': { lat: 34.1, lon: -118.2 },
+        'America/Sao_Paulo': { lat: -23.5, lon: -46.6 },
+        'Australia/Sydney': { lat: -33.9, lon: 151.2 },
+        'Pacific/Auckland': { lat: -36.8, lon: 174.8 },
+    };
+
+    if (tz && tzCoords[tz]) {
+        return tzCoords[tz];
+    }
+
+    // Try partial match
+    for (const [key, coords] of Object.entries(tzCoords)) {
+        if (tz && tz.includes(key.split('/')[1])) {
+            return coords;
+        }
+    }
+
+    // Default to Jakarta
+    return { lat: -6.2, lon: 106.8 };
 }
 
 async function fetchWeather(lat, lon) {
     try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, {}, 8000);
         const data = await response.json();
 
         if (data.current) {
@@ -658,10 +816,14 @@ async function fetchWeather(lat, lon) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
                 ${windSpeed} km/h
             `;
+        } else {
+            document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+            document.getElementById('weatherEmoji').textContent = '❓';
         }
     } catch (err) {
         console.error('Weather fetch error:', err);
         document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+        document.getElementById('weatherEmoji').textContent = '❓';
     }
 }
 
