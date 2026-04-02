@@ -1,1044 +1,1290 @@
-// ===== NetPulse Real Speed Test - FIXED =====
-
-document.addEventListener('DOMContentLoaded', function () {
-    initClock();
-    initThemeSwitcher();
-    initParticles();
-    initGauge();
-    initSpeedTest();
-    initHistory();
-
-    // Start weather immediately with timezone fallback (don't wait for IP)
-    startWeatherFallback();
-
-    // Then try IP detection (will update weather if better coords found)
-    fetchIPInfo();
-});
-
-// ===== CLOCK =====
-function initClock() {
-    function updateClock() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-
-        document.getElementById('clockTime').textContent = `${hours}:${minutes}:${seconds}`;
-
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('clockDate').textContent = now.toLocaleDateString('en-US', options);
-
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tzShort = tz.split('/').pop().replace(/_/g, ' ');
-        document.getElementById('tzBadge').textContent = tzShort;
-    }
-
-    updateClock();
-    setInterval(updateClock, 1000);
+/* ===== Theme Variables ===== */
+:root,
+[data-theme="cyber"] {
+    --bg-primary: #070d1e;
+    --bg-secondary: #0a1628;
+    --surface: rgba(255, 255, 255, 0.06);
+    --surface-hover: rgba(255, 255, 255, 0.11);
+    --surface-active: rgba(255, 255, 255, 0.18);
+    --accent: #38bdf8;
+    --accent-rgb: 56, 189, 248;
+    --accent-glow: rgba(56, 189, 248, 0.3);
+    --accent-light: rgba(56, 189, 248, 0.15);
+    --accent2: #a78bfa;
+    --accent2-rgb: 167, 139, 250;
+    --operator: #fb923c;
+    --operator-rgb: 251, 146, 60;
+    --operator-glow: rgba(251, 146, 60, 0.25);
+    --text-primary: #f0f9ff;
+    --text-secondary: #7dd3fc;
+    --text-tertiary: #38bdf8;
+    --border: rgba(56, 189, 248, 0.1);
+    --border-light: rgba(56, 189, 248, 0.05);
+    --shadow: rgba(0, 5, 20, 0.6);
+    --glass-bg: rgba(10, 18, 35, 0.65);
+    --glass-border: rgba(56, 189, 248, 0.12);
+    --glass-inner: rgba(255, 255, 255, 0.03);
+    --ripple: rgba(56, 189, 248, 0.2);
+    --particle-color: rgba(56, 189, 248, 0.4);
+    --neon-glow: 0 0 20px rgba(56, 189, 248, 0.15), 0 0 40px rgba(56, 189, 248, 0.08);
+    --gauge-gradient: linear-gradient(90deg, #38bdf8, #a78bfa, #fb923c);
+    --download-color: #38bdf8;
+    --upload-color: #a78bfa;
+    --ping-color: #4ade80;
+    --jitter-color: #fbbf24;
+    --grid-color: rgba(56, 189, 248, 0.03);
 }
 
-// ===== THEME SWITCHER =====
-function initThemeSwitcher() {
-    const savedTheme = localStorage.getItem('netpulse-theme') || 'cyber';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    updateActiveThemeBtn(savedTheme);
-
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const theme = btn.getAttribute('data-theme');
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('netpulse-theme', theme);
-            updateActiveThemeBtn(theme);
-        });
-    });
+[data-theme="neon"] {
+    --bg-primary: #070d18;
+    --bg-secondary: #0a1420;
+    --surface: rgba(255, 255, 255, 0.06);
+    --surface-hover: rgba(255, 255, 255, 0.11);
+    --surface-active: rgba(255, 255, 255, 0.18);
+    --accent: #4ade80;
+    --accent-rgb: 74, 222, 128;
+    --accent-glow: rgba(74, 222, 128, 0.3);
+    --accent-light: rgba(74, 222, 128, 0.15);
+    --accent2: #22d3ee;
+    --accent2-rgb: 34, 211, 238;
+    --operator: #f472b6;
+    --operator-rgb: 244, 114, 182;
+    --operator-glow: rgba(244, 114, 182, 0.25);
+    --text-primary: #f0fdf4;
+    --text-secondary: #86efac;
+    --text-tertiary: #4ade80;
+    --border: rgba(74, 222, 128, 0.1);
+    --border-light: rgba(74, 222, 128, 0.05);
+    --shadow: rgba(0, 0, 0, 0.6);
+    --glass-bg: rgba(10, 20, 30, 0.65);
+    --glass-border: rgba(74, 222, 128, 0.12);
+    --glass-inner: rgba(255, 255, 255, 0.03);
+    --ripple: rgba(74, 222, 128, 0.2);
+    --particle-color: rgba(74, 222, 128, 0.4);
+    --neon-glow: 0 0 20px rgba(74, 222, 128, 0.15), 0 0 40px rgba(74, 222, 128, 0.08);
+    --gauge-gradient: linear-gradient(90deg, #4ade80, #22d3ee, #f472b6);
+    --download-color: #4ade80;
+    --upload-color: #22d3ee;
+    --ping-color: #fbbf24;
+    --jitter-color: #fb923c;
+    --grid-color: rgba(74, 222, 128, 0.03);
 }
 
-function updateActiveThemeBtn(theme) {
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
-    });
+[data-theme="purple"] {
+    --bg-primary: #0d0a1e;
+    --bg-secondary: #120e28;
+    --surface: rgba(167, 139, 250, 0.08);
+    --surface-hover: rgba(167, 139, 250, 0.15);
+    --surface-active: rgba(167, 139, 250, 0.22);
+    --accent: #a78bfa;
+    --accent-rgb: 167, 139, 250;
+    --accent-glow: rgba(167, 139, 250, 0.3);
+    --accent-light: rgba(167, 139, 250, 0.15);
+    --accent2: #f472b6;
+    --accent2-rgb: 244, 114, 182;
+    --operator: #fb923c;
+    --operator-rgb: 251, 146, 60;
+    --operator-glow: rgba(251, 146, 60, 0.25);
+    --text-primary: #f5f3ff;
+    --text-secondary: #c4b5fd;
+    --text-tertiary: #a78bfa;
+    --border: rgba(167, 139, 250, 0.1);
+    --border-light: rgba(167, 139, 250, 0.05);
+    --shadow: rgba(10, 0, 20, 0.6);
+    --glass-bg: rgba(15, 10, 30, 0.65);
+    --glass-border: rgba(167, 139, 250, 0.12);
+    --glass-inner: rgba(255, 255, 255, 0.03);
+    --ripple: rgba(167, 139, 250, 0.2);
+    --particle-color: rgba(244, 114, 182, 0.4);
+    --neon-glow: 0 0 20px rgba(167, 139, 250, 0.15), 0 0 40px rgba(167, 139, 250, 0.08);
+    --gauge-gradient: linear-gradient(90deg, #a78bfa, #f472b6, #fb923c);
+    --download-color: #a78bfa;
+    --upload-color: #f472b6;
+    --ping-color: #4ade80;
+    --jitter-color: #fbbf24;
+    --grid-color: rgba(167, 139, 250, 0.03);
 }
 
-// ===== PARTICLES =====
-function initParticles() {
-    const canvas = document.getElementById('particleCanvas');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) return;
-
-    const PARTICLE_COUNT = 50;
-
-    class Particle {
-        constructor() {
-            this.reset();
-        }
-
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 2 + 0.5;
-            this.speedX = (Math.random() - 0.5) * 0.4;
-            this.speedY = (Math.random() - 0.5) * 0.4;
-            this.opacity = Math.random() * 0.5 + 0.1;
-            this.fadeSpeed = Math.random() * 0.005 + 0.002;
-            this.growing = Math.random() > 0.5;
-        }
-
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
-
-            if (this.growing) {
-                this.opacity += this.fadeSpeed;
-                if (this.opacity >= 0.6) this.growing = false;
-            } else {
-                this.opacity -= this.fadeSpeed;
-                if (this.opacity <= 0.05) this.growing = true;
-            }
-
-            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-                this.reset();
-            }
-        }
-
-        draw() {
-            const style = getComputedStyle(document.documentElement);
-            const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fillStyle = color.replace(/[\d.]+\)$/, `${this.opacity})`);
-            ctx.fill();
-        }
-    }
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-        particles.push(new Particle());
-    }
-
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-            p.update();
-            p.draw();
-        });
-
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
-                const dx = particles[i].x - particles[j].x;
-                const dy = particles[i].y - particles[j].y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 120) {
-                    const style = getComputedStyle(document.documentElement);
-                    const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
-                    const opacity = (1 - dist / 120) * 0.15;
-                    ctx.beginPath();
-                    ctx.moveTo(particles[i].x, particles[i].y);
-                    ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = color.replace(/[\d.]+\)$/, `${opacity})`);
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                }
-            }
-        }
-
-        requestAnimationFrame(animate);
-    }
-
-    animate();
+[data-theme="sunset"] {
+    --bg-primary: #1a0d08;
+    --bg-secondary: #221510;
+    --surface: rgba(251, 146, 60, 0.08);
+    --surface-hover: rgba(251, 146, 60, 0.15);
+    --surface-active: rgba(251, 146, 60, 0.22);
+    --accent: #fb923c;
+    --accent-rgb: 251, 146, 60;
+    --accent-glow: rgba(251, 146, 60, 0.3);
+    --accent-light: rgba(251, 146, 60, 0.15);
+    --accent2: #f472b6;
+    --accent2-rgb: 244, 114, 182;
+    --operator: #a78bfa;
+    --operator-rgb: 167, 139, 250;
+    --operator-glow: rgba(167, 139, 250, 0.25);
+    --text-primary: #fff7ed;
+    --text-secondary: #fdba74;
+    --text-tertiary: #fb923c;
+    --border: rgba(251, 146, 60, 0.1);
+    --border-light: rgba(251, 146, 60, 0.05);
+    --shadow: rgba(15, 5, 0, 0.6);
+    --glass-bg: rgba(25, 15, 10, 0.65);
+    --glass-border: rgba(251, 146, 60, 0.12);
+    --glass-inner: rgba(255, 255, 255, 0.03);
+    --ripple: rgba(251, 146, 60, 0.2);
+    --particle-color: rgba(244, 114, 182, 0.4);
+    --neon-glow: 0 0 20px rgba(251, 146, 60, 0.15), 0 0 40px rgba(251, 146, 60, 0.08);
+    --gauge-gradient: linear-gradient(90deg, #fb923c, #f472b6, #a78bfa);
+    --download-color: #fb923c;
+    --upload-color: #f472b6;
+    --ping-color: #4ade80;
+    --jitter-color: #fbbf24;
+    --grid-color: rgba(251, 146, 60, 0.03);
 }
 
-// ===== GAUGE =====
-let gaugeProgressEl;
-const GAUGE_ARC_LENGTH = 314;
-
-function initGauge() {
-    gaugeProgressEl = document.getElementById('gaugeProgress');
-
-    const svg = document.querySelector('.gauge-svg');
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-
-    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    gradient.setAttribute('id', 'gaugeGradient');
-    gradient.setAttribute('x1', '0%');
-    gradient.setAttribute('y1', '0%');
-    gradient.setAttribute('x2', '100%');
-    gradient.setAttribute('y2', '0%');
-
-    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop1.setAttribute('offset', '0%');
-    stop1.style.stopColor = 'var(--accent)';
-
-    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop2.setAttribute('offset', '50%');
-    stop2.style.stopColor = 'var(--accent2)';
-
-    const stop3 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    stop3.setAttribute('offset', '100%');
-    stop3.style.stopColor = 'var(--operator)';
-
-    gradient.appendChild(stop1);
-    gradient.appendChild(stop2);
-    gradient.appendChild(stop3);
-    defs.appendChild(gradient);
-    svg.insertBefore(defs, svg.firstChild);
-
-    const ticksGroup = document.getElementById('gaugeTicks');
-    const cx = 130, cy = 140, r = 100;
-    const tickValues = [0, 25, 50, 75, 100, 150, 200, 300, 500];
-
-    tickValues.forEach(val => {
-        const maxVal = 500;
-        const ratio = val / maxVal;
-        const angle = Math.PI + ratio * Math.PI;
-        const x1 = cx + (r - 8) * Math.cos(angle);
-        const y1 = cy + (r - 8) * Math.sin(angle);
-        const x2 = cx + (r + 2) * Math.cos(angle);
-        const y2 = cy + (r + 2) * Math.sin(angle);
-        const tx = cx + (r - 22) * Math.cos(angle);
-        const ty = cy + (r - 22) * Math.sin(angle);
-
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', x1);
-        line.setAttribute('y1', y1);
-        line.setAttribute('x2', x2);
-        line.setAttribute('y2', y2);
-        line.setAttribute('stroke-width', '1.5');
-        ticksGroup.appendChild(line);
-
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', tx);
-        text.setAttribute('y', ty);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('dominant-baseline', 'middle');
-        text.textContent = val;
-        ticksGroup.appendChild(text);
-    });
-
-    setGaugeValue(0);
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-function setGaugeValue(value, maxValue = 500) {
-    const ratio = Math.min(value / maxValue, 1);
-    const offset = GAUGE_ARC_LENGTH * (1 - ratio);
-    if (gaugeProgressEl) {
-        gaugeProgressEl.style.strokeDashoffset = offset;
-    }
-    document.getElementById('gaugeValue').textContent = Math.round(value);
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-// ===== PHASE INDICATOR =====
-function setPhase(phase) {
-    const steps = document.querySelectorAll('.phase-step');
-    const lines = document.querySelectorAll('.phase-line');
-    const phases = ['ping', 'download', 'upload'];
-    const currentIndex = phases.indexOf(phase);
-
-    steps.forEach((step, i) => {
-        step.classList.remove('active', 'completed');
-        if (i < currentIndex) {
-            step.classList.add('completed');
-        } else if (i === currentIndex) {
-            step.classList.add('active');
-        }
-    });
-
-    lines.forEach((line, i) => {
-        line.classList.remove('active');
-        if (i < currentIndex) {
-            line.classList.add('active');
-        }
-    });
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
 }
 
-function resetPhases() {
-    document.querySelectorAll('.phase-step').forEach(s => s.classList.remove('active', 'completed'));
-    document.querySelectorAll('.phase-line').forEach(l => l.classList.remove('active'));
+/* ===== Background ===== */
+.bg-gradient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(var(--accent-rgb), 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 80% 90%, rgba(var(--accent2-rgb), 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(var(--operator-rgb), 0.03) 0%, transparent 60%);
+    animation: bgPulse 8s ease-in-out infinite;
 }
 
-function completeAllPhases() {
-    document.querySelectorAll('.phase-step').forEach(s => {
-        s.classList.remove('active');
-        s.classList.add('completed');
-    });
-    document.querySelectorAll('.phase-line').forEach(l => l.classList.add('active'));
+@keyframes bgPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
-// ===== REAL SPEED TEST =====
-let isTesting = false;
-
-function initSpeedTest() {
-    const startBtn = document.getElementById('startBtn');
-    startBtn.addEventListener('click', () => {
-        if (isTesting) return;
-        runSpeedTest();
-    });
+.bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%);
 }
 
-// --- Real Ping Test ---
-async function realPingTest() {
-    const url = 'https://www.cloudflare.com/cdn-cgi/trace';
-    const pings = [];
-    const iterations = 20;
-
-    document.getElementById('gaugeLabel').textContent = 'Testing Ping';
-    document.getElementById('gaugeUnit').textContent = 'ms';
-    setPhase('ping');
-
-    for (let i = 0; i < iterations; i++) {
-        try {
-            const cacheBuster = `?cb=${Date.now()}-${Math.random()}`;
-            const start = performance.now();
-            await fetch(url + cacheBuster, {
-                method: 'GET',
-                cache: 'no-store',
-                mode: 'cors',
-            });
-            const end = performance.now();
-            const latency = end - start;
-            pings.push(latency);
-            setGaugeValue(latency, 200);
-            document.getElementById('gaugeValue').textContent = latency.toFixed(1);
-        } catch (e) {
-            try {
-                const cacheBuster = `?cb=${Date.now()}-${Math.random()}`;
-                const start = performance.now();
-                await fetch(url + cacheBuster, {
-                    method: 'HEAD',
-                    cache: 'no-store',
-                    mode: 'no-cors',
-                });
-                const end = performance.now();
-                pings.push(end - start);
-                setGaugeValue(end - start, 200);
-                document.getElementById('gaugeValue').textContent = (end - start).toFixed(1);
-            } catch (e2) {
-                // skip failed ping
-            }
-        }
-        await sleep(100);
-    }
-
-    if (pings.length === 0) {
-        return { ping: 0, jitter: 0 };
-    }
-
-    pings.sort((a, b) => a - b);
-    const trimCount = Math.floor(pings.length * 0.1);
-    const trimmedPings = pings.slice(trimCount, pings.length - trimCount);
-
-    const avgPing = trimmedPings.reduce((a, b) => a + b, 0) / trimmedPings.length;
-
-    let jitterSum = 0;
-    for (let i = 1; i < trimmedPings.length; i++) {
-        jitterSum += Math.abs(trimmedPings[i] - trimmedPings[i - 1]);
-    }
-    const jitter = trimmedPings.length > 1 ? jitterSum / (trimmedPings.length - 1) : 0;
-
-    return { ping: avgPing, jitter: jitter };
+.bg-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 0%, var(--bg-primary) 75%);
+    z-index: 2;
 }
 
-// --- Real Download Speed Test ---
-async function realDownloadTest() {
-    document.getElementById('gaugeLabel').textContent = 'Download';
-    document.getElementById('gaugeUnit').textContent = 'Mbps';
-    setPhase('download');
-
-    const testSizes = [
-        { size: 1e5, label: '100KB' },
-        { size: 1e6, label: '1MB' },
-        { size: 5e6, label: '5MB' },
-        { size: 10e6, label: '10MB' },
-        { size: 25e6, label: '25MB' },
-    ];
-
-    let totalBytes = 0;
-    let totalTime = 0;
-    let currentSpeed = 0;
-    const speedSamples = [];
-    const testDuration = 10000;
-    const startTime = performance.now();
-
-    for (const test of testSizes) {
-        if (performance.now() - startTime > testDuration) break;
-
-        try {
-            const url = `https://speed.cloudflare.com/__down?bytes=${test.size}&cacheBuster=${Date.now()}`;
-            const fetchStart = performance.now();
-
-            const response = await fetch(url, { cache: 'no-store' });
-
-            if (!response.ok) throw new Error('Download failed');
-
-            const reader = response.body.getReader();
-            let receivedBytes = 0;
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                receivedBytes += value.length;
-                const elapsed = (performance.now() - fetchStart) / 1000;
-
-                if (elapsed > 0) {
-                    currentSpeed = (receivedBytes * 8) / (elapsed * 1e6);
-                    setGaugeValue(currentSpeed);
-                    document.getElementById('gaugeValue').textContent = currentSpeed.toFixed(1);
-                }
-            }
-
-            const fetchEnd = performance.now();
-            const duration = (fetchEnd - fetchStart) / 1000;
-
-            if (duration > 0) {
-                const speed = (receivedBytes * 8) / (duration * 1e6);
-                speedSamples.push(speed);
-                totalBytes += receivedBytes;
-                totalTime += duration;
-            }
-
-            if (currentSpeed > 100 && test.size < 25e6) {
-                continue;
-            }
-
-        } catch (e) {
-            console.warn('Download test chunk failed:', e);
-            try {
-                const altUrl = `https://speed.cloudflare.com/__down?bytes=${Math.min(test.size, 1e6)}&cacheBuster=${Date.now()}-alt`;
-                const fetchStart = performance.now();
-                const response = await fetch(altUrl, { cache: 'no-store' });
-                const blob = await response.blob();
-                const fetchEnd = performance.now();
-                const duration = (fetchEnd - fetchStart) / 1000;
-                if (duration > 0) {
-                    const speed = (blob.size * 8) / (duration * 1e6);
-                    speedSamples.push(speed);
-                    totalBytes += blob.size;
-                    totalTime += duration;
-                    currentSpeed = speed;
-                    setGaugeValue(currentSpeed);
-                    document.getElementById('gaugeValue').textContent = currentSpeed.toFixed(1);
-                }
-            } catch (e2) {
-                console.warn('Alt download also failed:', e2);
-            }
-        }
-    }
-
-    if (speedSamples.length > 0) {
-        if (speedSamples.length > 2) {
-            speedSamples.sort((a, b) => a - b);
-            speedSamples.shift();
-        }
-        const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
-        return avgSpeed;
-    }
-
-    if (totalTime > 0) {
-        return (totalBytes * 8) / (totalTime * 1e6);
-    }
-
-    return 0;
+/* ===== Particle Canvas ===== */
+.particle-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
 }
 
-// --- Real Upload Speed Test ---
-async function realUploadTest() {
-    document.getElementById('gaugeLabel').textContent = 'Upload';
-    document.getElementById('gaugeUnit').textContent = 'Mbps';
-    setPhase('upload');
-
-    const testSizes = [
-        1e5,
-        5e5,
-        1e6,
-        2e6,
-        5e6,
-    ];
-
-    const speedSamples = [];
-    const testDuration = 10000;
-    const startTime = performance.now();
-
-    for (const size of testSizes) {
-        if (performance.now() - startTime > testDuration) break;
-
-        try {
-            const data = new ArrayBuffer(size);
-            const view = new Uint8Array(data);
-            for (let i = 0; i < Math.min(view.length, 1024); i++) {
-                view[i] = Math.floor(Math.random() * 256);
-            }
-
-            const blob = new Blob([data]);
-            const url = `https://speed.cloudflare.com/__up?cacheBuster=${Date.now()}`;
-
-            const fetchStart = performance.now();
-            const response = await fetch(url, {
-                method: 'POST',
-                body: blob,
-                cache: 'no-store',
-            });
-
-            await response.text();
-            const fetchEnd = performance.now();
-            const duration = (fetchEnd - fetchStart) / 1000;
-
-            if (duration > 0) {
-                const speed = (size * 8) / (duration * 1e6);
-                speedSamples.push(speed);
-
-                setGaugeValue(speed);
-                document.getElementById('gaugeValue').textContent = speed.toFixed(1);
-            }
-        } catch (e) {
-            console.warn('Upload test chunk failed:', e);
-            try {
-                const smallSize = Math.min(size, 5e5);
-                const data = new ArrayBuffer(smallSize);
-                const blob = new Blob([data]);
-                const url = `https://speed.cloudflare.com/__up?cacheBuster=${Date.now()}-retry`;
-
-                const fetchStart = performance.now();
-                await fetch(url, { method: 'POST', body: blob, cache: 'no-store' });
-                const fetchEnd = performance.now();
-                const duration = (fetchEnd - fetchStart) / 1000;
-
-                if (duration > 0) {
-                    const speed = (smallSize * 8) / (duration * 1e6);
-                    speedSamples.push(speed);
-                    setGaugeValue(speed);
-                    document.getElementById('gaugeValue').textContent = speed.toFixed(1);
-                }
-            } catch (e2) {
-                console.warn('Alt upload also failed:', e2);
-            }
-        }
-    }
-
-    if (speedSamples.length > 0) {
-        if (speedSamples.length > 2) {
-            speedSamples.sort((a, b) => a - b);
-            speedSamples.shift();
-        }
-        return speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
-    }
-
-    return 0;
+/* ===== Gradient Text ===== */
+.gradient-text {
+    background: linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)), var(--operator));
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease-in-out infinite;
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
-async function runSpeedTest() {
-    isTesting = true;
-    const startBtn = document.getElementById('startBtn');
-    startBtn.classList.add('testing');
-    startBtn.querySelector('.start-btn-text').textContent = 'TESTING...';
-
-    document.getElementById('downloadResult').textContent = '--';
-    document.getElementById('uploadResult').textContent = '--';
-    document.getElementById('pingResult').textContent = '--';
-    document.getElementById('jitterResult').textContent = '--';
-    resetPhases();
-
-    try {
-        // Phase 1: Ping Test
-        const { ping, jitter } = await realPingTest();
-        document.getElementById('pingResult').textContent = ping.toFixed(1);
-        document.getElementById('jitterResult').textContent = jitter.toFixed(1);
-
-        await sleep(300);
-
-        // Phase 2: Download Test
-        const download = await realDownloadTest();
-        document.getElementById('downloadResult').textContent = download.toFixed(2);
-
-        await sleep(300);
-
-        // Phase 3: Upload Test
-        const upload = await realUploadTest();
-        document.getElementById('uploadResult').textContent = upload.toFixed(2);
-
-        // Done
-        completeAllPhases();
-        document.getElementById('gaugeLabel').textContent = 'Complete';
-        document.getElementById('gaugeUnit').textContent = 'Mbps';
-        setGaugeValue(download);
-        document.getElementById('gaugeValue').textContent = download.toFixed(1);
-
-        // Save to history
-        saveTestResult({ download, upload, ping, jitter, timestamp: Date.now() });
-        renderHistory();
-
-    } catch (err) {
-        document.getElementById('gaugeLabel').textContent = 'Error';
-        console.error('Speed test error:', err);
-        resetPhases();
-    }
-
-    isTesting = false;
-    startBtn.classList.remove('testing');
-    startBtn.querySelector('.start-btn-text').textContent = 'START TEST';
+/* ===== Theme Switcher ===== */
+.theme-switcher {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+    background: rgba(10, 15, 25, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50px;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    z-index: 100;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    animation: fadeSlideDown 0.6s ease 0.3s both;
 }
 
-// ===== IP INFO & WEATHER (FULLY FIXED) =====
-
-// Track if weather has been loaded with good coords
-let weatherLoadedWithCoords = false;
-
-// Helper: fetch with timeout
-function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => clearTimeout(timeoutId));
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-// Start weather immediately using timezone-based coords (don't wait for IP)
-function startWeatherFallback() {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const defaults = getDefaultCoordsFromTimezone(tz);
-    fetchWeather(defaults.lat, defaults.lon, false);
+.theme-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-// ===== ROBUST IP DETECTION WITH 6 FALLBACK STRATEGIES =====
-async function fetchIPInfo() {
-    let ipData = null;
+.theme-btn:hover { transform: scale(1.2); }
 
-    // Strategy 1: Cloudflare trace (most reliable, always works, no CORS issues)
-    if (!ipData) {
-        try {
-            const response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
-            if (response.ok) {
-                const text = await response.text();
-                const cfData = {};
-                text.split('\n').forEach(line => {
-                    const idx = line.indexOf('=');
-                    if (idx > 0) {
-                        cfData[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
-                    }
-                });
-                if (cfData.ip) {
-                    ipData = {
-                        ip: cfData.ip,
-                        isp: null,
-                        city: null,
-                        country: cfData.loc || null,
-                        lat: null,
-                        lon: null,
-                        timezone: null,
-                        partial: true
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('Cloudflare trace failed:', e.message);
-        }
+.theme-btn.active {
+    border-color: var(--text-primary);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.theme-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.theme-btn:hover .theme-dot { transform: scale(1.1); }
+
+/* ===== App Container ===== */
+.app-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+}
+
+/* ===== Info Row ===== */
+.info-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 700px;
+    animation: fadeSlideUp 0.6s ease 0.2s both;
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Info Widgets ===== */
+.info-widget {
+    flex: 1;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(50px) saturate(1.4);
+    -webkit-backdrop-filter: blur(50px) saturate(1.4);
+    box-shadow: 0 4px 30px var(--shadow), var(--neon-glow);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.info-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px var(--shadow), var(--neon-glow), 0 0 30px rgba(var(--accent-rgb), 0.1);
+}
+
+.widget-glow-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.5), transparent);
+}
+
+/* Clock Widget */
+.clock-content {
+    text-align: center;
+}
+
+.clock-time {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3);
+    line-height: 1.2;
+    animation: timePulse 2s ease-in-out infinite;
+}
+
+@keyframes timePulse {
+    0%, 100% { text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3); }
+    50% { text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.5), 0 0 60px rgba(var(--accent-rgb), 0.15); }
+}
+
+.clock-date {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.clock-timezone {
+    margin-top: 6px;
+}
+
+.tz-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+/* Weather Widget */
+.weather-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.weather-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.weather-emoji {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.weather-temp {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+}
+
+.weather-desc {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.weather-details {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.weather-detail {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.weather-detail svg {
+    opacity: 0.7;
+}
+
+/* IP Widget */
+.ip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ip-address {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ip-icon {
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.ip-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+}
+
+.ip-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ip-detail {
+    font-size: 10px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== Speed Test Card ===== */
+.speedtest-card {
+    width: 100%;
+    max-width: 700px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    backdrop-filter: blur(50px) saturate(1.4);
+    -webkit-backdrop-filter: blur(50px) saturate(1.4);
+    box-shadow:
+        0 8px 60px var(--shadow),
+        0 0 0 1px var(--border-light),
+        var(--neon-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+    position: relative;
+    animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+@keyframes cardAppear {
+    from { opacity: 0; transform: translateY(40px) scale(0.92); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.neon-border {
+    position: absolute;
+    inset: -2px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--operator));
+    z-index: -1;
+    opacity: 0.35;
+    animation: neonPulse 3s ease-in-out infinite;
+    filter: blur(1px);
+}
+
+@keyframes neonPulse {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 0.5; }
+}
+
+.card-glow-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.5), transparent);
+    z-index: 1;
+    animation: scanLine 3s linear infinite;
+}
+
+@keyframes scanLine {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.3; }
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.card-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.logo-icon {
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% { filter: drop-shadow(0 0 0px var(--accent)); }
+    50% { filter: drop-shadow(0 0 12px var(--accent-glow)); }
+}
+
+.card-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
+}
+
+/* ===== Phase Indicator ===== */
+.phase-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 8px 24px 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.phase-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    transition: all 0.4s ease;
+}
+
+.phase-step span {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.25);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.4s ease;
+}
+
+.phase-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    transition: all 0.4s ease;
+    flex-shrink: 0;
+}
+
+.phase-step.active .phase-dot {
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow), 0 0 24px rgba(var(--accent-rgb), 0.2);
+    animation: phasePulse 1s ease-in-out infinite;
+}
+
+.phase-step.active span {
+    color: var(--accent);
+}
+
+.phase-step.completed .phase-dot {
+    background: var(--ping-color);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+}
+
+.phase-step.completed span {
+    color: var(--ping-color);
+}
+
+@keyframes phasePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+
+.phase-line {
+    width: 30px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    transition: background 0.4s ease;
+    margin: 0 4px;
+}
+
+.phase-line.active {
+    background: linear-gradient(90deg, var(--ping-color), var(--accent));
+}
+
+/* ===== Gauge Section ===== */
+.gauge-section {
+    display: flex;
+    justify-content: center;
+    padding: 10px 24px 0;
+    position: relative;
+    z-index: 1;
+}
+
+.gauge-container {
+    position: relative;
+    width: 280px;
+    height: 175px;
+}
+
+.gauge-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.gauge-bg {
+    stroke: var(--surface);
+}
+
+.gauge-progress {
+    stroke: url(#gaugeGradient);
+    stroke-dasharray: 314;
+    stroke-dashoffset: 314;
+    transition: stroke-dashoffset 0.15s ease-out;
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.gauge-ticks line {
+    stroke: var(--text-tertiary);
+    opacity: 0.3;
+}
+
+.gauge-ticks text {
+    fill: var(--text-tertiary);
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    opacity: 0.5;
+}
+
+.gauge-value-container {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+.gauge-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.3);
+    transition: all 0.1s ease;
+}
+
+.gauge-unit {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.gauge-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+
+/* ===== Results Section ===== */
+.results-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 16px 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+}
+
+.result-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.result-item:hover .result-icon {
+    transform: scale(1.1);
+}
+
+.download-icon {
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--download-color);
+}
+
+.upload-icon {
+    background: rgba(var(--accent2-rgb), 0.12);
+    color: var(--upload-color);
+}
+
+.ping-icon {
+    background: rgba(74, 222, 128, 0.12);
+    color: var(--ping-color);
+}
+
+.jitter-icon {
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--jitter-color);
+}
+
+.result-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.result-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.result-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.result-unit {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.result-divider {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(180deg, transparent, rgba(var(--accent-rgb), 0.3), transparent);
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+/* ===== Start Button ===== */
+.start-section {
+    display: flex;
+    justify-content: center;
+    padding: 8px 24px 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.start-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 48px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), rgba(var(--accent-rgb), 0.8));
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px var(--accent-glow);
+    position: relative;
+    overflow: hidden;
+}
+
+.start-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.start-btn:hover::before {
+    left: 100%;
+}
+
+.start-btn:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 8px 40px var(--accent-glow), 0 0 60px rgba(var(--accent-rgb), 0.2);
+}
+
+.start-btn:active {
+    transform: scale(0.98);
+}
+
+.start-btn.testing {
+    background: linear-gradient(135deg, var(--operator), rgba(var(--operator-rgb), 0.8));
+    box-shadow: 0 4px 20px var(--operator-glow);
+    cursor: not-allowed;
+    animation: testingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes testingPulse {
+    0%, 100% { box-shadow: 0 4px 20px var(--operator-glow); }
+    50% { box-shadow: 0 4px 30px var(--operator-glow), 0 0 40px rgba(var(--operator-rgb), 0.2); }
+}
+
+.start-btn.testing:hover {
+    transform: none;
+    box-shadow: 0 4px 20px var(--operator-glow);
+}
+
+.start-btn-icon {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== Server Info ===== */
+.server-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 24px 18px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    position: relative;
+    z-index: 1;
+}
+
+.server-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ping-color);
+    animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(74, 222, 128, 0.5); }
+    50% { opacity: 0.5; box-shadow: 0 0 8px rgba(74, 222, 128, 0.8); }
+}
+
+.server-label {
+    font-weight: 600;
+}
+
+.server-name {
+    font-weight: 400;
+}
+
+/* ===== History Panel ===== */
+.history-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 100vh;
+    height: 100dvh;
+    opacity: 0;
+    background: rgba(8, 16, 24, 0.92);
+    border-left: 1px solid var(--glass-border);
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+    box-shadow: -8px 0 60px var(--shadow);
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+}
+
+.history-panel.open {
+    width: 340px;
+    opacity: 1;
+}
+
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 20px 12px;
+    flex-shrink: 0;
+}
+
+.history-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.history-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.history-close:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.history-actions {
+    padding: 0 20px 12px;
+    flex-shrink: 0;
+}
+
+.history-clear-btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.history-clear-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 14px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-hover) transparent;
+}
+
+.history-list::-webkit-scrollbar { width: 4px; }
+.history-list::-webkit-scrollbar-track { background: transparent; }
+.history-list::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 4px; }
+
+.history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+.history-item {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: historySlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.history-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.history-item:hover::before { opacity: 1; }
+
+@keyframes historySlide {
+    from { opacity: 0; transform: translateX(30px) scale(0.95); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.history-item:hover {
+    background: var(--surface-hover);
+    transform: translateX(-4px);
+}
+
+.history-item-time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.history-item-results {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.history-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-stat-label {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.history-stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.history-stat-value.upload-val { color: var(--upload-color); }
+.history-stat-value.ping-val { color: var(--ping-color); }
+.history-stat-value.jitter-val { color: var(--jitter-color); }
+
+/* ===== Footer ===== */
+.footer-credit {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    opacity: 0.7;
+    padding: 8px 16px;
+    background: rgba(10, 15, 25, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    letter-spacing: 0.3px;
+    animation: fadeSlideUp 0.6s ease 0.6s both;
+    transition: all 0.4s ease;
+}
+
+.footer-credit:hover {
+    opacity: 1;
+    background: rgba(10, 15, 25, 0.5);
+    border-color: rgba(var(--accent-rgb), 0.15);
+    transform: translateY(-2px);
+}
+
+.footer-credit .gradient-text {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .particle-canvas {
+        display: none !important;
     }
 
-    // Strategy 2: ipapi.co (CORS-friendly, full info)
-    if (!ipData || ipData.partial) {
-        try {
-            const response = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ip && !data.error && !data.reason) {
-                    ipData = {
-                        ip: data.ip,
-                        isp: data.org || 'Unknown',
-                        city: data.city || null,
-                        country: data.country_name || null,
-                        lat: data.latitude,
-                        lon: data.longitude,
-                        timezone: data.timezone,
-                        partial: false
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('ipapi.co failed:', e.message);
-        }
+    body {
+        display: block;
+        overflow-y: auto;
     }
 
-    // Strategy 3: ipwho.is (CORS-friendly, full info)
-    if (!ipData || ipData.partial) {
-        try {
-            const response = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.success !== false && data.ip) {
-                    ipData = {
-                        ip: data.ip,
-                        isp: data.connection ? data.connection.isp : 'Unknown',
-                        city: data.city || null,
-                        country: data.country || null,
-                        lat: data.latitude,
-                        lon: data.longitude,
-                        timezone: data.timezone ? data.timezone.id : null,
-                        partial: false
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('ipwho.is failed:', e.message);
-        }
+    .app-container {
+        padding: 12px;
+        padding-top: 60px;
+        padding-bottom: 30px;
+        min-height: auto;
+        justify-content: flex-start;
     }
 
-    // Strategy 4: ipify.org (simple IP only, very reliable)
-    if (!ipData) {
-        try {
-            const response = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ip) {
-                    ipData = {
-                        ip: data.ip,
-                        isp: null,
-                        city: null,
-                        country: null,
-                        lat: null,
-                        lon: null,
-                        timezone: null,
-                        partial: true
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('ipify.org failed:', e.message);
-        }
+    .info-row {
+        flex-direction: column;
+        gap: 8px;
     }
 
-    // Strategy 5: ip-api.com (may have CORS issues on HTTPS but try)
-    if (!ipData || ipData.partial) {
-        try {
-            const response = await fetchWithTimeout(
-                'https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone',
-                {},
-                5000
-            );
-            if (response.ok) {
-                const data = await response.json();
-                if (data.status === 'success') {
-                    ipData = {
-                        ip: data.query,
-                        isp: data.isp || 'Unknown',
-                        city: data.city || null,
-                        country: data.country || null,
-                        lat: data.lat,
-                        lon: data.lon,
-                        timezone: data.timezone,
-                        partial: false
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('ip-api.com failed:', e.message);
-        }
+    .info-widget {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 15, 25, 0.88);
     }
 
-    // Strategy 6: freeipapi.com (another CORS-friendly option)
-    if (!ipData || ipData.partial) {
-        try {
-            const response = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ipAddress) {
-                    ipData = {
-                        ip: data.ipAddress,
-                        isp: data.isp || ipData?.isp || 'Unknown',
-                        city: data.cityName || ipData?.city || null,
-                        country: data.countryName || ipData?.country || null,
-                        lat: data.latitude || ipData?.lat,
-                        lon: data.longitude || ipData?.lon,
-                        timezone: data.timeZone || ipData?.timezone,
-                        partial: false
-                    };
-                }
-            }
-        } catch (e) {
-            console.warn('freeipapi.com failed:', e.message);
-        }
+    .speedtest-card {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 15, 25, 0.88);
+        border-radius: 20px;
     }
 
-    // Update UI with whatever we got
-    if (ipData) {
-        document.getElementById('ipAddress').textContent = ipData.ip;
-        document.getElementById('ipISP').textContent = `ISP: ${ipData.isp || 'Unknown'}`;
+    .neon-border { animation: none; opacity: 0.15; filter: none; }
+    .card-glow-line { animation: none; opacity: 0.4; }
+    .gradient-text { animation: none; background-position: 0% 50%; }
+    .clock-time { animation: none; }
+    .logo-icon { animation: none; }
 
-        const city = ipData.city || '--';
-        const country = ipData.country || '--';
-        document.getElementById('ipLocation').textContent = city !== '--' || country !== '--'
-            ? `${city}, ${country}`
-            : 'Location: --';
+    .gauge-container { width: 240px; height: 150px; }
+    .gauge-value { font-size: 38px; }
 
-        document.getElementById('serverName').textContent = `Cloudflare CDN (${city !== '--' ? city : 'Auto'})`;
+    .results-section {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 20px;
+    }
 
-        // Update weather with better coordinates if available
-        if (ipData.lat && ipData.lon && !weatherLoadedWithCoords) {
-            fetchWeather(ipData.lat, ipData.lon, true);
-        }
-    } else {
-        // All strategies failed - show IP as unavailable but don't leave it stuck on "Detecting..."
-        document.getElementById('ipAddress').textContent = 'Could not detect';
-        document.getElementById('ipISP').textContent = 'ISP: --';
-        document.getElementById('ipLocation').textContent = 'Location: --';
+    .result-divider {
+        display: none;
+    }
 
-        // Try browser geolocation for weather as last resort
-        tryBrowserGeolocation();
+    .result-item {
+        flex: 0 0 calc(50% - 6px);
+        justify-content: flex-start;
+        padding: 8px 12px;
+        background: var(--surface);
+        border-radius: 12px;
+    }
+
+    .start-btn {
+        padding: 12px 36px;
+        font-size: 14px;
+    }
+
+    .theme-switcher {
+        top: 10px;
+        right: 10px;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .theme-btn { width: 28px; height: 28px; }
+    .theme-dot { width: 14px; height: 14px; }
+
+    .history-panel {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(8, 16, 24, 0.97);
+    }
+
+    .history-panel.open { width: 280px; }
+
+    .footer-credit {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 15, 25, 0.7);
+    }
+
+    .phase-indicator {
+        padding: 6px 12px 2px;
+    }
+
+    .phase-step {
+        padding: 4px 8px;
+    }
+
+    .phase-step span {
+        font-size: 9px;
+    }
+
+    .phase-line {
+        width: 20px;
     }
 }
 
-// Try browser geolocation API for weather coordinates
-function tryBrowserGeolocation() {
-    if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                if (!weatherLoadedWithCoords) {
-                    fetchWeather(position.coords.latitude, position.coords.longitude, true);
-                }
-            },
-            () => {
-                // Geolocation denied/failed - weather fallback already running from startWeatherFallback()
-                console.warn('Geolocation denied or failed');
-            },
-            { timeout: 5000 }
-        );
-    }
-}
-
-// Get approximate coordinates from timezone
-function getDefaultCoordsFromTimezone(tz) {
-    const tzCoords = {
-        'Asia/Jakarta': { lat: -6.2, lon: 106.8 },
-        'Asia/Makassar': { lat: -5.1, lon: 119.4 },
-        'Asia/Jayapura': { lat: -2.5, lon: 140.7 },
-        'Asia/Pontianak': { lat: -0.02, lon: 109.3 },
-        'Asia/Singapore': { lat: 1.35, lon: 103.8 },
-        'Asia/Kuala_Lumpur': { lat: 3.1, lon: 101.7 },
-        'Asia/Bangkok': { lat: 13.7, lon: 100.5 },
-        'Asia/Ho_Chi_Minh': { lat: 10.8, lon: 106.6 },
-        'Asia/Manila': { lat: 14.6, lon: 121.0 },
-        'Asia/Tokyo': { lat: 35.7, lon: 139.7 },
-        'Asia/Seoul': { lat: 37.6, lon: 127.0 },
-        'Asia/Shanghai': { lat: 31.2, lon: 121.5 },
-        'Asia/Hong_Kong': { lat: 22.3, lon: 114.2 },
-        'Asia/Taipei': { lat: 25.0, lon: 121.5 },
-        'Asia/Kolkata': { lat: 28.6, lon: 77.2 },
-        'Asia/Dubai': { lat: 25.2, lon: 55.3 },
-        'Asia/Riyadh': { lat: 24.7, lon: 46.7 },
-        'Europe/London': { lat: 51.5, lon: -0.1 },
-        'Europe/Paris': { lat: 48.9, lon: 2.3 },
-        'Europe/Berlin': { lat: 52.5, lon: 13.4 },
-        'Europe/Moscow': { lat: 55.8, lon: 37.6 },
-        'Europe/Istanbul': { lat: 41.0, lon: 29.0 },
-        'America/New_York': { lat: 40.7, lon: -74.0 },
-        'America/Chicago': { lat: 41.9, lon: -87.6 },
-        'America/Denver': { lat: 39.7, lon: -105.0 },
-        'America/Los_Angeles': { lat: 34.1, lon: -118.2 },
-        'America/Sao_Paulo': { lat: -23.5, lon: -46.6 },
-        'America/Mexico_City': { lat: 19.4, lon: -99.1 },
-        'Australia/Sydney': { lat: -33.9, lon: 151.2 },
-        'Australia/Melbourne': { lat: -37.8, lon: 145.0 },
-        'Pacific/Auckland': { lat: -36.8, lon: 174.8 },
-        'Africa/Cairo': { lat: 30.0, lon: 31.2 },
-        'Africa/Lagos': { lat: 6.5, lon: 3.4 },
-    };
-
-    if (tz && tzCoords[tz]) {
-        return tzCoords[tz];
+@media (max-width: 380px) {
+    .app-container {
+        padding: 8px;
+        padding-top: 56px;
+        gap: 10px;
     }
 
-    // Try partial match
-    for (const [key, coords] of Object.entries(tzCoords)) {
-        if (tz && tz.includes(key.split('/')[1])) {
-            return coords;
-        }
+    .clock-time { font-size: 18px; }
+    .weather-temp { font-size: 16px; }
+    .ip-text { font-size: 11px; }
+
+    .gauge-container { width: 200px; height: 130px; }
+    .gauge-value { font-size: 32px; }
+    .result-value { font-size: 18px; }
+
+    .start-btn {
+        padding: 10px 28px;
+        font-size: 12px;
+        letter-spacing: 2px;
     }
 
-    // Default to Jakarta
-    return { lat: -6.2, lon: 106.8 };
-}
-
-async function fetchWeather(lat, lon, isAccurateCoords) {
-    // If we already have weather from accurate coords, don't overwrite with fallback
-    if (weatherLoadedWithCoords && !isAccurateCoords) return;
-
-    try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
-        const response = await fetchWithTimeout(url, {}, 8000);
-
-        if (!response.ok) throw new Error(`Weather API returned ${response.status}`);
-
-        const data = await response.json();
-
-        if (data && data.current) {
-            const temp = data.current.temperature_2m;
-            const humidity = data.current.relative_humidity_2m;
-            const windSpeed = data.current.wind_speed_10m;
-            const weatherCode = data.current.weather_code;
-
-            document.getElementById('weatherTemp').textContent = `${Math.round(temp)}°C`;
-            document.getElementById('weatherDesc').textContent = getWeatherDescription(weatherCode);
-            document.getElementById('weatherEmoji').textContent = getWeatherEmoji(weatherCode);
-            document.getElementById('weatherHumidity').innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                ${humidity}%
-            `;
-            document.getElementById('weatherWind').innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
-                ${windSpeed} km/h
-            `;
-
-            if (isAccurateCoords) {
-                weatherLoadedWithCoords = true;
-            }
-        } else {
-            throw new Error('No current weather data in response');
-        }
-    } catch (err) {
-        console.error('Weather fetch error:', err);
-        // Only show error if we haven't loaded weather yet
-        if (!weatherLoadedWithCoords) {
-            document.getElementById('weatherDesc').textContent = 'Weather unavailable';
-            document.getElementById('weatherEmoji').textContent = '❓';
-            document.getElementById('weatherTemp').textContent = '--°C';
-        }
-    }
-}
-
-function getWeatherDescription(code) {
-    const descriptions = {
-        0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-        45: 'Foggy', 48: 'Depositing rime fog',
-        51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
-        56: 'Freezing drizzle', 57: 'Dense freezing drizzle',
-        61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
-        66: 'Freezing rain', 67: 'Heavy freezing rain',
-        71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
-        77: 'Snow grains', 80: 'Slight rain showers', 81: 'Moderate rain showers',
-        82: 'Violent rain showers', 85: 'Slight snow showers', 86: 'Heavy snow showers',
-        95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with heavy hail'
-    };
-    return descriptions[code] || 'Unknown';
-}
-
-function getWeatherEmoji(code) {
-    if (code === 0) return '☀️';
-    if (code <= 2) return '⛅';
-    if (code === 3) return '☁️';
-    if (code <= 48) return '🌫️';
-    if (code <= 57) return '🌦️';
-    if (code <= 67) return '🌧️';
-    if (code <= 77) return '🌨️';
-    if (code <= 82 return '🌧️';
-    icode <= 86) return '🌨️';
-    if (code >= 95) return '⛈️';
-   return '🌤️';
-}
-
-// ===== HISTORY =====
-const HISTORY_EY = 'netpulse-history';
-
-function initHistory() {
-    const historyBtn = document.getElementById('historyBtn');
-    const historyPanel = document.getElementById('historyPanel');
-    const historyClose = document.getElementById('historyClose');
-    const historyClear = document.getElementById('historyClear');
-
-    historyBtn.addEventListener('click', () => {
-        historyPanel.classList.toggle('open');
-    });
-
-    historyClose.addEventListener('click', () => {
-        historyPanel.classList.remove('open');
-    });
-
-    historyClear.addEventListener('click', () => {
-        localStorage.removeItem(HISTORY_KEY);
-        renderHistory();
-    });
-
-    document.addEventListener('click', (e) => {
-        if (historyPanel.classList.contains('open') &&
-            !historyPanel.contains(e.target) &&
-            !document.getElementById('historyBtn').contains(e.target)) {
-            historyPanel.classList.remove('open');
-        }
-    });
-
-    renderHistory();
-}
-
-function saveTestResult(result) {
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    history.unshift(result);
-    if (history.length > 20) history.pop();
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-}
-
-function renderHistory() {
-    const historyList = document.getElementById('historyList');
-    const historyEmpty = document.getElementById('historyEmpty');
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-
-    const existingItems = historyList.querySelectorAll('.history-item');
-    existingItems.forEach(item => item.remove());
-
-    if (history.length === 0) {
-        historyEmpty.style.display = 'flex';
-        return;
-    }
-
-    historyEmpty.style.display = 'none';
-
-    history.forEach(result => {
-        const item = document.createElement('div');
-        item.className = 'history-item';
-
-        const date = new Date(result.timestamp);
-        const timeStr = date.toLocaleString('en-US', {
-            month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        const jitterHtml = result.jitter !== undefined
-            ? `<div class="history-stat">
-                    <span class="history-stat-label">Jitter</span>
-                    <span class="history-stat-value jitter-val">${result.jitter.toFixed(1)}</span>
-                </div>`
-            : '';
-
-        item.innerHTML = `
-            <div class="history-item-time">${timeStr}</div>
-            <div class="history-item-results">
-                <div class="history-stat">
-                    <span class="history-stat-label">Download</span>
-                    <span class="history-stat-value">${result.download.toFixed(1)}</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-label">Upload</span>
-                    <span class="history-stat-value upload-val">${result.upload.toFixed(1)}</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-label">Ping</span>
-                    <span class="history-stat-value ping-val">${result.ping.toFixed(1)}</span>
-                </div>
-                ${jitterHtml}
-            </div>
-        `;
-
-        historyList.appendChild(item);
-    });
+    .history-panel.open { width: 260px; }
 }
