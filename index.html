@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
-    <title>NetPulse - Speed Test</title>
+    <title>NetPulse - Real Speed Test</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -14,15 +14,9 @@
 
 <body>
     <!-- Background -->
-    <div class="bg-image"></div>
+    <div class="bg-gradient"></div>
+    <div class="bg-grid"></div>
     <div class="bg-overlay"></div>
-
-    <!-- Mist Effects -->
-    <div class="mist-container">
-        <div class="mist mist-1"></div>
-        <div class="mist mist-2"></div>
-        <div class="mist mist-3"></div>
-    </div>
 
     <!-- Particle Canvas -->
     <canvas class="particle-canvas" id="particleCanvas"></canvas>
@@ -117,6 +111,24 @@
                 </div>
             </div>
 
+            <!-- Phase Indicator -->
+            <div class="phase-indicator" id="phaseIndicator">
+                <div class="phase-step" data-phase="ping">
+                    <div class="phase-dot"></div>
+                    <span>Ping</span>
+                </div>
+                <div class="phase-line"></div>
+                <div class="phase-step" data-phase="download">
+                    <div class="phase-dot"></div>
+                    <span>Download</span>
+                </div>
+                <div class="phase-line"></div>
+                <div class="phase-step" data-phase="upload">
+                    <div class="phase-dot"></div>
+                    <span>Upload</span>
+                </div>
+            </div>
+
             <!-- Gauge Section -->
             <div class="gauge-section">
                 <div class="gauge-container">
@@ -170,6 +182,17 @@
                         <span class="result-unit">ms</span>
                     </div>
                 </div>
+                <div class="result-divider"></div>
+                <div class="result-item">
+                    <div class="result-icon jitter-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+                    </div>
+                    <div class="result-info">
+                        <span class="result-label">Jitter</span>
+                        <span class="result-value" id="jitterResult">--</span>
+                        <span class="result-unit">ms</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Start Button -->
@@ -185,7 +208,7 @@
             <!-- Server Info -->
             <div class="server-info">
                 <span class="server-label">Server:</span>
-                <span class="server-name" id="serverName">Auto-detect</span>
+                <span class="server-name" id="serverName">Cloudflare CDN</span>
                 <span class="server-dot"></span>
             </div>
         </div>
