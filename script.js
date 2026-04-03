@@ -1,4 +1,4 @@
-// ===== NetPulse Real Speed Test - ALL BUGS FIXED =====
+// ===== NetPulse Real Speed Test - Enhanced with Live Graph & Extended Duration =====
 
 document.addEventListener('DOMContentLoaded', function () {
     initClock();
@@ -7,29 +7,25 @@ document.addEventListener('DOMContentLoaded', function () {
     initGauge();
     initSpeedTest();
     initHistory();
-
-    // Start weather immediately with timezone fallback (don't wait for IP)
     startWeatherFallback();
-
-    // Then try IP detection (will update weather if better coords found)
     fetchIPInfo();
 });
 
 // ===== CLOCK =====
 function initClock() {
     function updateClock() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
+        var now = new Date();
+        var hours = String(now.getHours()).padStart(2, '0');
+        var minutes = String(now.getMinutes()).padStart(2, '0');
+        var seconds = String(now.getSeconds()).padStart(2, '0');
 
-        document.getElementById('clockTime').textContent = `${hours}:${minutes}:${seconds}`;
+        document.getElementById('clockTime').textContent = hours + ':' + minutes + ':' + seconds;
 
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('clockDate').textContent = now.toLocaleDateString('en-US', options);
 
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tzShort = tz.split('/').pop().replace(/_/g, ' ');
+        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var tzShort = tz.split('/').pop().replace(/_/g, ' ');
         document.getElementById('tzBadge').textContent = tzShort;
     }
 
@@ -39,13 +35,13 @@ function initClock() {
 
 // ===== THEME SWITCHER =====
 function initThemeSwitcher() {
-    const savedTheme = localStorage.getItem('netpulse-theme') || 'cyber';
+    var savedTheme = localStorage.getItem('netpulse-theme') || 'cyber';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateActiveThemeBtn(savedTheme);
 
     document.querySelectorAll('.theme-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            const theme = btn.getAttribute('data-theme');
+            var theme = btn.getAttribute('data-theme');
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('netpulse-theme', theme);
             updateActiveThemeBtn(theme);
@@ -61,11 +57,11 @@ function updateActiveThemeBtn(theme) {
 
 // ===== PARTICLES =====
 function initParticles() {
-    const canvas = document.getElementById('particleCanvas');
+    var canvas = document.getElementById('particleCanvas');
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    let particles = [];
+    var ctx = canvas.getContext('2d');
+    var particles = [];
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -75,10 +71,10 @@ function initParticles() {
     resize();
     window.addEventListener('resize', resize);
 
-    const isMobile = window.innerWidth <= 768;
+    var isMobile = window.innerWidth <= 768;
     if (isMobile) return;
 
-    const PARTICLE_COUNT = 50;
+    var PARTICLE_COUNT = 50;
 
     function createParticle() {
         return {
@@ -122,15 +118,15 @@ function initParticles() {
     }
 
     function drawParticle(p) {
-        const style = getComputedStyle(document.documentElement);
-        const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
+        var style = getComputedStyle(document.documentElement);
+        var color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = color.replace(/[\d.]+\)$/, p.opacity + ')');
         ctx.fill();
     }
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
         particles.push(createParticle());
     }
 
@@ -141,15 +137,15 @@ function initParticles() {
             drawParticle(p);
         });
 
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
-                const dx = particles[i].x - particles[j].x;
-                const dy = particles[i].y - particles[j].y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+        for (var i = 0; i < particles.length; i++) {
+            for (var j = i + 1; j < particles.length; j++) {
+                var dx = particles[i].x - particles[j].x;
+                var dy = particles[i].y - particles[j].y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < 120) {
-                    const style = getComputedStyle(document.documentElement);
-                    const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
-                    const opacity = (1 - dist / 120) * 0.15;
+                    var style = getComputedStyle(document.documentElement);
+                    var color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
+                    var opacity = (1 - dist / 120) * 0.15;
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
@@ -173,25 +169,25 @@ var GAUGE_ARC_LENGTH = 314;
 function initGauge() {
     gaugeProgressEl = document.getElementById('gaugeProgress');
 
-    const svg = document.querySelector('.gauge-svg');
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    var svg = document.querySelector('.gauge-svg');
+    var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
 
-    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+    var gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
     gradient.setAttribute('id', 'gaugeGradient');
     gradient.setAttribute('x1', '0%');
     gradient.setAttribute('y1', '0%');
     gradient.setAttribute('x2', '100%');
     gradient.setAttribute('y2', '0%');
 
-    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    var stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
     stop1.setAttribute('offset', '0%');
     stop1.style.stopColor = 'var(--accent)';
 
-    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    var stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
     stop2.setAttribute('offset', '50%');
     stop2.style.stopColor = 'var(--accent2)';
 
-    const stop3 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    var stop3 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
     stop3.setAttribute('offset', '100%');
     stop3.style.stopColor = 'var(--operator)';
 
@@ -201,22 +197,22 @@ function initGauge() {
     defs.appendChild(gradient);
     svg.insertBefore(defs, svg.firstChild);
 
-    const ticksGroup = document.getElementById('gaugeTicks');
-    const cx = 130, cy = 140, r = 100;
-    const tickValues = [0, 25, 50, 75, 100, 150, 200, 300, 500];
+    var ticksGroup = document.getElementById('gaugeTicks');
+    var cx = 130, cy = 140, r = 100;
+    var tickValues = [0, 25, 50, 75, 100, 150, 200, 300, 500];
 
     tickValues.forEach(function(val) {
-        const maxVal = 500;
-        const ratio = val / maxVal;
-        const angle = Math.PI + ratio * Math.PI;
-        const x1 = cx + (r - 8) * Math.cos(angle);
-        const y1 = cy + (r - 8) * Math.sin(angle);
-        const x2 = cx + (r + 2) * Math.cos(angle);
-        const y2 = cy + (r + 2) * Math.sin(angle);
-        const tx = cx + (r - 22) * Math.cos(angle);
-        const ty = cy + (r - 22) * Math.sin(angle);
+        var maxVal = 500;
+        var ratio = val / maxVal;
+        var angle = Math.PI + ratio * Math.PI;
+        var x1 = cx + (r - 8) * Math.cos(angle);
+        var y1 = cy + (r - 8) * Math.sin(angle);
+        var x2 = cx + (r + 2) * Math.cos(angle);
+        var y2 = cy + (r + 2) * Math.sin(angle);
+        var tx = cx + (r - 22) * Math.cos(angle);
+        var ty = cy + (r - 22) * Math.sin(angle);
 
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', x1);
         line.setAttribute('y1', y1);
         line.setAttribute('x2', x2);
@@ -224,7 +220,7 @@ function initGauge() {
         line.setAttribute('stroke-width', '1.5');
         ticksGroup.appendChild(line);
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', tx);
         text.setAttribute('y', ty);
         text.setAttribute('text-anchor', 'middle');
@@ -238,8 +234,8 @@ function initGauge() {
 
 function setGaugeValue(value, maxValue) {
     if (maxValue === undefined) maxValue = 500;
-    const ratio = Math.min(value / maxValue, 1);
-    const offset = GAUGE_ARC_LENGTH * (1 - ratio);
+    var ratio = Math.min(value / maxValue, 1);
+    var offset = GAUGE_ARC_LENGTH * (1 - ratio);
     if (gaugeProgressEl) {
         gaugeProgressEl.style.strokeDashoffset = offset;
     }
@@ -248,10 +244,10 @@ function setGaugeValue(value, maxValue) {
 
 // ===== PHASE INDICATOR =====
 function setPhase(phase) {
-    const steps = document.querySelectorAll('.phase-step');
-    const lines = document.querySelectorAll('.phase-line');
-    const phases = ['ping', 'download', 'upload'];
-    const currentIndex = phases.indexOf(phase);
+    var steps = document.querySelectorAll('.phase-step');
+    var lines = document.querySelectorAll('.phase-line');
+    var phases = ['ping', 'download', 'upload'];
+    var currentIndex = phases.indexOf(phase);
 
     steps.forEach(function(step, i) {
         step.classList.remove('active', 'completed');
@@ -283,138 +279,300 @@ function completeAllPhases() {
     document.querySelectorAll('.phase-line').forEach(function(l) { l.classList.add('active'); });
 }
 
+// ===== LIVE GRAPH =====
+var graphData = [];
+var graphMaxPoints = 100;
+
+function showGraph() {
+    var section = document.getElementById('liveGraphSection');
+    if (section) section.classList.add('visible');
+    graphData = [];
+}
+
+function hideGraph() {
+    var section = document.getElementById('liveGraphSection');
+    if (section) section.classList.remove('visible');
+}
+
+function addGraphPoint(value) {
+    graphData.push(value);
+    if (graphData.length > graphMaxPoints) {
+        graphData.shift();
+    }
+    drawGraph();
+}
+
+function drawGraph() {
+    var canvas = document.getElementById('liveGraphCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width;
+    var h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (graphData.length < 2) return;
+
+    var maxVal = Math.max.apply(null, graphData) * 1.2;
+    if (maxVal === 0) maxVal = 1;
+
+    var style = getComputedStyle(document.documentElement);
+    var accentColor = style.getPropertyValue('--accent').trim() || '#38bdf8';
+    var accentRgb = style.getPropertyValue('--accent-rgb').trim() || '56, 189, 248';
+
+    // Draw filled area
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (var i = 0; i < graphData.length; i++) {
+        var x = (i / (graphMaxPoints - 1)) * w;
+        var y = h - (graphData[i] / maxVal) * (h - 10);
+        if (i === 0) {
+            ctx.lineTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    var lastX = ((graphData.length - 1) / (graphMaxPoints - 1)) * w;
+    ctx.lineTo(lastX, h);
+    ctx.closePath();
+
+    var gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, 'rgba(' + accentRgb + ', 0.3)');
+    gradient.addColorStop(1, 'rgba(' + accentRgb + ', 0.02)');
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Draw line
+    ctx.beginPath();
+    for (var i = 0; i < graphData.length; i++) {
+        var x = (i / (graphMaxPoints - 1)) * w;
+        var y = h - (graphData[i] / maxVal) * (h - 10);
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = accentColor;
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw current point
+    if (graphData.length > 0) {
+        var lastIdx = graphData.length - 1;
+        var px = (lastIdx / (graphMaxPoints - 1)) * w;
+        var py = h - (graphData[lastIdx] / maxVal) * (h - 10);
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fillStyle = accentColor;
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
+
+// ===== PROGRESS BAR =====
+var testStartTime = 0;
+var totalTestDuration = 28000; // ~28 seconds total
+
+function showProgressBar() {
+    var bar = document.getElementById('testProgressBar');
+    if (bar) bar.classList.add('visible');
+    testStartTime = performance.now();
+}
+
+function hideProgressBar() {
+    var bar = document.getElementById('testProgressBar');
+    if (bar) bar.classList.remove('visible');
+}
+
+function updateProgress(elapsed, total) {
+    var percent = Math.min((elapsed / total) * 100, 100);
+    var fill = document.getElementById('progressFill');
+    var timeEl = document.getElementById('progressTime');
+    var percentEl = document.getElementById('progressPercent');
+
+    if (fill) fill.style.width = percent + '%';
+    if (timeEl) timeEl.textContent = Math.floor(elapsed / 1000) + 's';
+    if (percentEl) percentEl.textContent = Math.round(percent) + '%';
+}
+
 // ===== REAL SPEED TEST =====
 var isTesting = false;
 
 function initSpeedTest() {
-    const startBtn = document.getElementById('startBtn');
+    var startBtn = document.getElementById('startBtn');
     startBtn.addEventListener('click', function() {
         if (isTesting) return;
         runSpeedTest();
     });
 }
 
-// --- Real Ping Test ---
+// --- Real Ping Test (Extended: 30 iterations) ---
 async function realPingTest() {
-    const url = 'https://www.cloudflare.com/cdn-cgi/trace';
-    const pings = [];
-    const iterations = 20;
+    var url = 'https://www.cloudflare.com/cdn-cgi/trace';
+    var pings = [];
+    var iterations = 30; // Extended from 20 to 30
 
     document.getElementById('gaugeLabel').textContent = 'Testing Ping';
     document.getElementById('gaugeUnit').textContent = 'ms';
     setPhase('ping');
 
-    for (let i = 0; i < iterations; i++) {
+    // Add glow to ping icon
+    var pingIcon = document.querySelector('.ping-icon');
+    var jitterIcon = document.querySelector('.jitter-icon');
+    if (pingIcon) pingIcon.classList.add('glow');
+    if (jitterIcon) jitterIcon.classList.add('glow');
+
+    for (var i = 0; i < iterations; i++) {
         try {
-            const cacheBuster = '?cb=' + Date.now() + '-' + Math.random();
-            const start = performance.now();
+            var cacheBuster = '?cb=' + Date.now() + '-' + Math.random();
+            var start = performance.now();
             await fetch(url + cacheBuster, {
                 method: 'GET',
                 cache: 'no-store',
                 mode: 'cors',
             });
-            const end = performance.now();
-            const latency = end - start;
+            var end = performance.now();
+            var latency = end - start;
             pings.push(latency);
             setGaugeValue(latency, 200);
             document.getElementById('gaugeValue').textContent = latency.toFixed(1);
+
+            // Update ping result in real-time
+            if (pings.length > 2) {
+                var sortedPings = pings.slice().sort(function(a, b) { return a - b; });
+                var trimCount = Math.floor(sortedPings.length * 0.1);
+                var trimmedPings = sortedPings.slice(trimCount, sortedPings.length - trimCount);
+                var currentAvg = trimmedPings.reduce(function(a, b) { return a + b; }, 0) / trimmedPings.length;
+                document.getElementById('pingResult').textContent = currentAvg.toFixed(1);
+
+                var jSum = 0;
+                for (var j = 1; j < trimmedPings.length; j++) {
+                    jSum += Math.abs(trimmedPings[j] - trimmedPings[j - 1]);
+                }
+                var currentJitter = trimmedPings.length > 1 ? jSum / (trimmedPings.length - 1) : 0;
+                document.getElementById('jitterResult').textContent = currentJitter.toFixed(1);
+            }
+
+            updateProgress(performance.now() - testStartTime, totalTestDuration);
         } catch (e) {
             try {
-                const cacheBuster = '?cb=' + Date.now() + '-' + Math.random();
-                const start = performance.now();
-                await fetch(url + cacheBuster, {
+                var cacheBuster2 = '?cb=' + Date.now() + '-' + Math.random();
+                var start2 = performance.now();
+                await fetch(url + cacheBuster2, {
                     method: 'HEAD',
                     cache: 'no-store',
                     mode: 'no-cors',
                 });
-                const end = performance.now();
-                pings.push(end - start);
-                setGaugeValue(end - start, 200);
-                document.getElementById('gaugeValue').textContent = (end - start).toFixed(1);
+                var end2 = performance.now();
+                pings.push(end2 - start2);
+                setGaugeValue(end2 - start2, 200);
+                document.getElementById('gaugeValue').textContent = (end2 - start2).toFixed(1);
             } catch (e2) {
                 // skip failed ping
             }
         }
-        await sleep(100);
+        await sleep(120);
     }
+
+    if (pingIcon) pingIcon.classList.remove('glow');
+    if (jitterIcon) jitterIcon.classList.remove('glow');
 
     if (pings.length === 0) {
         return { ping: 0, jitter: 0 };
     }
 
     pings.sort(function(a, b) { return a - b; });
-    const trimCount = Math.floor(pings.length * 0.1);
-    const trimmedPings = pings.slice(trimCount, pings.length - trimCount);
+    var trimCount = Math.floor(pings.length * 0.1);
+    var trimmedPings = pings.slice(trimCount, pings.length - trimCount);
 
-    const avgPing = trimmedPings.reduce(function(a, b) { return a + b; }, 0) / trimmedPings.length;
+    var avgPing = trimmedPings.reduce(function(a, b) { return a + b; }, 0) / trimmedPings.length;
 
-    let jitterSum = 0;
-    for (let i = 1; i < trimmedPings.length; i++) {
-        jitterSum += Math.abs(trimmedPings[i] - trimmedPings[i - 1]);
+    var jitterSum = 0;
+    for (var k = 1; k < trimmedPings.length; k++) {
+        jitterSum += Math.abs(trimmedPings[k] - trimmedPings[k - 1]);
     }
-    const jitter = trimmedPings.length > 1 ? jitterSum / (trimmedPings.length - 1) : 0;
+    var jitter = trimmedPings.length > 1 ? jitterSum / (trimmedPings.length - 1) : 0;
 
     return { ping: avgPing, jitter: jitter };
 }
 
-// --- Real Download Speed Test ---
+// --- Real Download Speed Test (Extended to ~12s) ---
 async function realDownloadTest() {
     document.getElementById('gaugeLabel').textContent = 'Download';
     document.getElementById('gaugeUnit').textContent = 'Mbps';
     setPhase('download');
+    showGraph();
+    document.getElementById('graphLabel').textContent = 'Download speed over time';
 
-    const testSizes = [
+    var downloadIcon = document.querySelector('.download-icon');
+    if (downloadIcon) downloadIcon.classList.add('glow');
+
+    var testSizes = [
         { size: 1e5, label: '100KB' },
+        { size: 5e5, label: '500KB' },
         { size: 1e6, label: '1MB' },
         { size: 5e6, label: '5MB' },
         { size: 10e6, label: '10MB' },
         { size: 25e6, label: '25MB' },
+        { size: 25e6, label: '25MB-2' },
+        { size: 25e6, label: '25MB-3' },
     ];
 
-    let totalBytes = 0;
-    let totalTime = 0;
-    let currentSpeed = 0;
-    const speedSamples = [];
-    const testDuration = 10000;
-    const startTime = performance.now();
+    var totalBytes = 0;
+    var totalTime = 0;
+    var currentSpeed = 0;
+    var speedSamples = [];
+    var testDuration = 12000; // Extended to 12 seconds
+    var startTime = performance.now();
 
-    for (const test of testSizes) {
+    for (var t = 0; t < testSizes.length; t++) {
+        var test = testSizes[t];
         if (performance.now() - startTime > testDuration) break;
 
         try {
-            const url = 'https://speed.cloudflare.com/__down?bytes=' + test.size + '&cacheBuster=' + Date.now();
-            const fetchStart = performance.now();
+            var url = 'https://speed.cloudflare.com/__down?bytes=' + test.size + '&cacheBuster=' + Date.now();
+            var fetchStart = performance.now();
 
-            const response = await fetch(url, { cache: 'no-store' });
+            var response = await fetch(url, { cache: 'no-store' });
 
             if (!response.ok) throw new Error('Download failed');
 
-            const reader = response.body.getReader();
-            let receivedBytes = 0;
+            var reader = response.body.getReader();
+            var receivedBytes = 0;
 
             while (true) {
-                const result = await reader.read();
+                var result = await reader.read();
                 if (result.done) break;
 
                 receivedBytes += result.value.length;
-                const elapsed = (performance.now() - fetchStart) / 1000;
+                var elapsed = (performance.now() - fetchStart) / 1000;
 
                 if (elapsed > 0) {
                     currentSpeed = (receivedBytes * 8) / (elapsed * 1e6);
                     setGaugeValue(currentSpeed);
                     document.getElementById('gaugeValue').textContent = currentSpeed.toFixed(1);
+                    document.getElementById('downloadResult').textContent = currentSpeed.toFixed(2);
+                    addGraphPoint(currentSpeed);
                 }
             }
 
-            const fetchEnd = performance.now();
-            const duration = (fetchEnd - fetchStart) / 1000;
+            var fetchEnd = performance.now();
+            var duration = (fetchEnd - fetchStart) / 1000;
 
             if (duration > 0) {
-                const speed = (receivedBytes * 8) / (duration * 1e6);
+                var speed = (receivedBytes * 8) / (duration * 1e6);
                 speedSamples.push(speed);
                 totalBytes += receivedBytes;
                 totalTime += duration;
             }
+
+            updateProgress(performance.now() - testStartTime, totalTestDuration);
 
             if (currentSpeed > 100 && test.size < 25e6) {
                 continue;
@@ -423,20 +581,21 @@ async function realDownloadTest() {
         } catch (e) {
             console.warn('Download test chunk failed:', e);
             try {
-                const altUrl = 'https://speed.cloudflare.com/__down?bytes=' + Math.min(test.size, 1e6) + '&cacheBuster=' + Date.now() + '-alt';
-                const fetchStart = performance.now();
-                const response = await fetch(altUrl, { cache: 'no-store' });
-                const blob = await response.blob();
-                const fetchEnd = performance.now();
-                const duration = (fetchEnd - fetchStart) / 1000;
-                if (duration > 0) {
-                    const speed = (blob.size * 8) / (duration * 1e6);
-                    speedSamples.push(speed);
+                var altUrl = 'https://speed.cloudflare.com/__down?bytes=' + Math.min(test.size, 1e6) + '&cacheBuster=' + Date.now() + '-alt';
+                var fetchStart2 = performance.now();
+                var response2 = await fetch(altUrl, { cache: 'no-store' });
+                var blob = await response2.blob();
+                var fetchEnd2 = performance.now();
+                var duration2 = (fetchEnd2 - fetchStart2) / 1000;
+                if (duration2 > 0) {
+                    var speed2 = (blob.size * 8) / (duration2 * 1e6);
+                    speedSamples.push(speed2);
                     totalBytes += blob.size;
-                    totalTime += duration;
-                    currentSpeed = speed;
+                    totalTime += duration2;
+                    currentSpeed = speed2;
                     setGaugeValue(currentSpeed);
                     document.getElementById('gaugeValue').textContent = currentSpeed.toFixed(1);
+                    addGraphPoint(currentSpeed);
                 }
             } catch (e2) {
                 console.warn('Alt download also failed:', e2);
@@ -444,12 +603,14 @@ async function realDownloadTest() {
         }
     }
 
+    if (downloadIcon) downloadIcon.classList.remove('glow');
+
     if (speedSamples.length > 0) {
         if (speedSamples.length > 2) {
             speedSamples.sort(function(a, b) { return a - b; });
             speedSamples.shift();
         }
-        const avgSpeed = speedSamples.reduce(function(a, b) { return a + b; }, 0) / speedSamples.length;
+        var avgSpeed = speedSamples.reduce(function(a, b) { return a + b; }, 0) / speedSamples.length;
         return avgSpeed;
     }
 
@@ -460,79 +621,94 @@ async function realDownloadTest() {
     return 0;
 }
 
-// --- Real Upload Speed Test ---
+// --- Real Upload Speed Test (Extended to ~12s) ---
 async function realUploadTest() {
     document.getElementById('gaugeLabel').textContent = 'Upload';
     document.getElementById('gaugeUnit').textContent = 'Mbps';
     setPhase('upload');
+    graphData = [];
+    document.getElementById('graphLabel').textContent = 'Upload speed over time';
 
-    const testSizes = [
+    var uploadIcon = document.querySelector('.upload-icon');
+    if (uploadIcon) uploadIcon.classList.add('glow');
+
+    var testSizes = [
         1e5,
         5e5,
         1e6,
         2e6,
         5e6,
+        5e6,
+        5e6,
     ];
 
-    const speedSamples = [];
-    const testDuration = 10000;
-    const startTime = performance.now();
+    var speedSamples = [];
+    var testDuration = 12000; // Extended to 12 seconds
+    var startTime = performance.now();
 
-    for (const size of testSizes) {
+    for (var t = 0; t < testSizes.length; t++) {
+        var size = testSizes[t];
         if (performance.now() - startTime > testDuration) break;
 
         try {
-            const data = new ArrayBuffer(size);
-            const view = new Uint8Array(data);
-            for (let i = 0; i < Math.min(view.length, 1024); i++) {
+            var data = new ArrayBuffer(size);
+            var view = new Uint8Array(data);
+            for (var i = 0; i < Math.min(view.length, 1024); i++) {
                 view[i] = Math.floor(Math.random() * 256);
             }
 
-            const blob = new Blob([data]);
-            const url = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now();
+            var blob = new Blob([data]);
+            var url = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now();
 
-            const fetchStart = performance.now();
-            const response = await fetch(url, {
+            var fetchStart = performance.now();
+            var response = await fetch(url, {
                 method: 'POST',
                 body: blob,
                 cache: 'no-store',
             });
 
             await response.text();
-            const fetchEnd = performance.now();
-            const duration = (fetchEnd - fetchStart) / 1000;
+            var fetchEnd = performance.now();
+            var duration = (fetchEnd - fetchStart) / 1000;
 
             if (duration > 0) {
-                const speed = (size * 8) / (duration * 1e6);
+                var speed = (size * 8) / (duration * 1e6);
                 speedSamples.push(speed);
 
                 setGaugeValue(speed);
                 document.getElementById('gaugeValue').textContent = speed.toFixed(1);
+                document.getElementById('uploadResult').textContent = speed.toFixed(2);
+                addGraphPoint(speed);
             }
+
+            updateProgress(performance.now() - testStartTime, totalTestDuration);
         } catch (e) {
             console.warn('Upload test chunk failed:', e);
             try {
-                const smallSize = Math.min(size, 5e5);
-                const data = new ArrayBuffer(smallSize);
-                const blob = new Blob([data]);
-                const url = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now() + '-retry';
+                var smallSize = Math.min(size, 5e5);
+                var data2 = new ArrayBuffer(smallSize);
+                var blob2 = new Blob([data2]);
+                var url2 = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now() + '-retry';
 
-                const fetchStart = performance.now();
-                await fetch(url, { method: 'POST', body: blob, cache: 'no-store' });
-                const fetchEnd = performance.now();
-                const duration = (fetchEnd - fetchStart) / 1000;
+                var fetchStart2 = performance.now();
+                await fetch(url2, { method: 'POST', body: blob2, cache: 'no-store' });
+                var fetchEnd2 = performance.now();
+                var duration2 = (fetchEnd2 - fetchStart2) / 1000;
 
-                if (duration > 0) {
-                    const speed = (smallSize * 8) / (duration * 1e6);
-                    speedSamples.push(speed);
-                    setGaugeValue(speed);
-                    document.getElementById('gaugeValue').textContent = speed.toFixed(1);
+                if (duration2 > 0) {
+                    var speed2 = (smallSize * 8) / (duration2 * 1e6);
+                    speedSamples.push(speed2);
+                    setGaugeValue(speed2);
+                    document.getElementById('gaugeValue').textContent = speed2.toFixed(1);
+                    addGraphPoint(speed2);
                 }
             } catch (e2) {
                 console.warn('Alt upload also failed:', e2);
             }
         }
     }
+
+    if (uploadIcon) uploadIcon.classList.remove('glow');
 
     if (speedSamples.length > 0) {
         if (speedSamples.length > 2) {
@@ -551,7 +727,7 @@ function sleep(ms) {
 
 async function runSpeedTest() {
     isTesting = true;
-    const startBtn = document.getElementById('startBtn');
+    var startBtn = document.getElementById('startBtn');
     startBtn.classList.add('testing');
     startBtn.querySelector('.start-btn-text').textContent = 'TESTING...';
 
@@ -559,32 +735,47 @@ async function runSpeedTest() {
     document.getElementById('uploadResult').textContent = '--';
     document.getElementById('pingResult').textContent = '--';
     document.getElementById('jitterResult').textContent = '--';
+
+    // Remove highlight from all result values
+    document.querySelectorAll('.result-value').forEach(function(el) {
+        el.classList.remove('highlight');
+    });
+
     resetPhases();
+    showProgressBar();
 
     try {
-        // Phase 1: Ping Test
-        const pingResult = await realPingTest();
+        // Phase 1: Ping Test (~4-5 seconds)
+        var pingResult = await realPingTest();
         document.getElementById('pingResult').textContent = pingResult.ping.toFixed(1);
         document.getElementById('jitterResult').textContent = pingResult.jitter.toFixed(1);
+        document.getElementById('pingResult').classList.add('highlight');
+        document.getElementById('jitterResult').classList.add('highlight');
 
         await sleep(300);
 
-        // Phase 2: Download Test
-        const download = await realDownloadTest();
+        // Phase 2: Download Test (~12 seconds)
+        var download = await realDownloadTest();
         document.getElementById('downloadResult').textContent = download.toFixed(2);
+        document.getElementById('downloadResult').classList.add('highlight');
 
         await sleep(300);
 
-        // Phase 3: Upload Test
-        const upload = await realUploadTest();
+        // Phase 3: Upload Test (~12 seconds)
+        var upload = await realUploadTest();
         document.getElementById('uploadResult').textContent = upload.toFixed(2);
+        document.getElementById('uploadResult').classList.add('highlight');
 
         // Done
         completeAllPhases();
+        hideGraph();
         document.getElementById('gaugeLabel').textContent = 'Complete';
         document.getElementById('gaugeUnit').textContent = 'Mbps';
         setGaugeValue(download);
         document.getElementById('gaugeValue').textContent = download.toFixed(1);
+
+        // Update progress to 100%
+        updateProgress(totalTestDuration, totalTestDuration);
 
         // Save to history
         saveTestResult({ download: download, upload: upload, ping: pingResult.ping, jitter: pingResult.jitter, timestamp: Date.now() });
@@ -594,62 +785,57 @@ async function runSpeedTest() {
         document.getElementById('gaugeLabel').textContent = 'Error';
         console.error('Speed test error:', err);
         resetPhases();
+        hideGraph();
     }
 
     isTesting = false;
     startBtn.classList.remove('testing');
     startBtn.querySelector('.start-btn-text').textContent = 'START TEST';
+
+    // Hide progress bar after a delay
+    setTimeout(function() {
+        hideProgressBar();
+    }, 2000);
 }
 
-// ===== IP INFO & WEATHER (ALL BUGS FIXED) =====
-
-// Track if weather has been loaded with good coords
+// ===== IP INFO & WEATHER =====
 var weatherLoadedWithCoords = false;
 
-// Helper: fetch with timeout
 function fetchWithTimeout(url, options, timeoutMs) {
     if (!options) options = {};
     if (!timeoutMs) timeoutMs = 5000;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs);
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs);
     return fetch(url, Object.assign({}, options, { signal: controller.signal }))
         .finally(function() { clearTimeout(timeoutId); });
 }
 
-// Start weather immediately using timezone-based coords (don't wait for IP)
 function startWeatherFallback() {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const defaults = getDefaultCoordsFromTimezone(tz);
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    var defaults = getDefaultCoordsFromTimezone(tz);
     fetchWeather(defaults.lat, defaults.lon, false);
 }
 
-// ===== ROBUST IP DETECTION WITH 6 FALLBACK STRATEGIES =====
 async function fetchIPInfo() {
     var ipData = null;
 
-    // Strategy 1: Cloudflare trace (most reliable, always works, no CORS issues)
+    // Strategy 1: Cloudflare trace
     if (!ipData) {
         try {
-            const response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
+            var response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
             if (response.ok) {
-                const text = await response.text();
-                const cfData = {};
+                var text = await response.text();
+                var cfData = {};
                 text.split('\n').forEach(function(line) {
-                    const idx = line.indexOf('=');
+                    var idx = line.indexOf('=');
                     if (idx > 0) {
                         cfData[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
                     }
                 });
                 if (cfData.ip) {
                     ipData = {
-                        ip: cfData.ip,
-                        isp: null,
-                        city: null,
-                        country: cfData.loc || null,
-                        lat: null,
-                        lon: null,
-                        timezone: null,
-                        partial: true
+                        ip: cfData.ip, isp: null, city: null, country: cfData.loc || null,
+                        lat: null, lon: null, timezone: null, partial: true
                     };
                 }
             }
@@ -658,22 +844,17 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 2: ipapi.co (CORS-friendly, full info)
+    // Strategy 2: ipapi.co
     if (!ipData || ipData.partial) {
         try {
-            const response = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ip && !data.error && !data.reason) {
+            var response2 = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
+            if (response2.ok) {
+                var data2 = await response2.json();
+                if (data2 && data2.ip && !data2.error && !data2.reason) {
                     ipData = {
-                        ip: data.ip,
-                        isp: data.org || 'Unknown',
-                        city: data.city || null,
-                        country: data.country_name || null,
-                        lat: data.latitude,
-                        lon: data.longitude,
-                        timezone: data.timezone,
-                        partial: false
+                        ip: data2.ip, isp: data2.org || 'Unknown', city: data2.city || null,
+                        country: data2.country_name || null, lat: data2.latitude, lon: data2.longitude,
+                        timezone: data2.timezone, partial: false
                     };
                 }
             }
@@ -682,22 +863,18 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 3: ipwho.is (CORS-friendly, full info)
+    // Strategy 3: ipwho.is
     if (!ipData || ipData.partial) {
         try {
-            const response = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.success !== false && data.ip) {
+            var response3 = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
+            if (response3.ok) {
+                var data3 = await response3.json();
+                if (data3 && data3.success !== false && data3.ip) {
                     ipData = {
-                        ip: data.ip,
-                        isp: data.connection ? data.connection.isp : 'Unknown',
-                        city: data.city || null,
-                        country: data.country || null,
-                        lat: data.latitude,
-                        lon: data.longitude,
-                        timezone: data.timezone ? data.timezone.id : null,
-                        partial: false
+                        ip: data3.ip, isp: data3.connection ? data3.connection.isp : 'Unknown',
+                        city: data3.city || null, country: data3.country || null,
+                        lat: data3.latitude, lon: data3.longitude,
+                        timezone: data3.timezone ? data3.timezone.id : null, partial: false
                     };
                 }
             }
@@ -706,22 +883,16 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 4: ipify.org (simple IP only, very reliable)
+    // Strategy 4: ipify.org
     if (!ipData) {
         try {
-            const response = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ip) {
+            var response4 = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
+            if (response4.ok) {
+                var data4 = await response4.json();
+                if (data4 && data4.ip) {
                     ipData = {
-                        ip: data.ip,
-                        isp: null,
-                        city: null,
-                        country: null,
-                        lat: null,
-                        lon: null,
-                        timezone: null,
-                        partial: true
+                        ip: data4.ip, isp: null, city: null, country: null,
+                        lat: null, lon: null, timezone: null, partial: true
                     };
                 }
             }
@@ -733,23 +904,17 @@ async function fetchIPInfo() {
     // Strategy 5: ip-api.com
     if (!ipData || ipData.partial) {
         try {
-            const response = await fetchWithTimeout(
+            var response5 = await fetchWithTimeout(
                 'https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone',
-                {},
-                5000
+                {}, 5000
             );
-            if (response.ok) {
-                const data = await response.json();
-                if (data.status === 'success') {
+            if (response5.ok) {
+                var data5 = await response5.json();
+                if (data5.status === 'success') {
                     ipData = {
-                        ip: data.query,
-                        isp: data.isp || 'Unknown',
-                        city: data.city || null,
-                        country: data.country || null,
-                        lat: data.lat,
-                        lon: data.lon,
-                        timezone: data.timezone,
-                        partial: false
+                        ip: data5.query, isp: data5.isp || 'Unknown', city: data5.city || null,
+                        country: data5.country || null, lat: data5.lat, lon: data5.lon,
+                        timezone: data5.timezone, partial: false
                     };
                 }
             }
@@ -761,18 +926,18 @@ async function fetchIPInfo() {
     // Strategy 6: freeipapi.com
     if (!ipData || ipData.partial) {
         try {
-            const response = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.ipAddress) {
+            var response6 = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
+            if (response6.ok) {
+                var data6 = await response6.json();
+                if (data6 && data6.ipAddress) {
                     ipData = {
-                        ip: data.ipAddress,
-                        isp: data.isp || (ipData ? ipData.isp : null) || 'Unknown',
-                        city: data.cityName || (ipData ? ipData.city : null) || null,
-                        country: data.countryName || (ipData ? ipData.country : null) || null,
-                        lat: data.latitude || (ipData ? ipData.lat : null),
-                        lon: data.longitude || (ipData ? ipData.lon : null),
-                        timezone: data.timeZone || (ipData ? ipData.timezone : null),
+                        ip: data6.ipAddress,
+                        isp: data6.isp || (ipData ? ipData.isp : null) || 'Unknown',
+                        city: data6.cityName || (ipData ? ipData.city : null) || null,
+                        country: data6.countryName || (ipData ? ipData.country : null) || null,
+                        lat: data6.latitude || (ipData ? ipData.lat : null),
+                        lon: data6.longitude || (ipData ? ipData.lon : null),
+                        timezone: data6.timeZone || (ipData ? ipData.timezone : null),
                         partial: false
                     };
                 }
@@ -782,13 +947,13 @@ async function fetchIPInfo() {
         }
     }
 
-    // Update UI with whatever we got
+    // Update UI
     if (ipData) {
         document.getElementById('ipAddress').textContent = ipData.ip;
         document.getElementById('ipISP').textContent = 'ISP: ' + (ipData.isp || 'Unknown');
 
-        const city = ipData.city || '--';
-        const country = ipData.country || '--';
+        var city = ipData.city || '--';
+        var country = ipData.country || '--';
         if (city !== '--' || country !== '--') {
             document.getElementById('ipLocation').textContent = city + ', ' + country;
         } else {
@@ -797,22 +962,17 @@ async function fetchIPInfo() {
 
         document.getElementById('serverName').textContent = 'Cloudflare CDN (' + (city !== '--' ? city : 'Auto') + ')';
 
-        // Update weather with better coordinates if available
         if (ipData.lat && ipData.lon && !weatherLoadedWithCoords) {
             fetchWeather(ipData.lat, ipData.lon, true);
         }
     } else {
-        // All strategies failed
         document.getElementById('ipAddress').textContent = 'Could not detect';
         document.getElementById('ipISP').textContent = 'ISP: --';
         document.getElementById('ipLocation').textContent = 'Location: --';
-
-        // Try browser geolocation for weather as last resort
         tryBrowserGeolocation();
     }
 }
 
-// Try browser geolocation API for weather coordinates
 function tryBrowserGeolocation() {
     if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -829,9 +989,8 @@ function tryBrowserGeolocation() {
     }
 }
 
-// Get approximate coordinates from timezone
 function getDefaultCoordsFromTimezone(tz) {
-    const tzCoords = {
+    var tzCoords = {
         'Asia/Jakarta': { lat: -6.2, lon: 106.8 },
         'Asia/Makassar': { lat: -5.1, lon: 119.4 },
         'Asia/Jayapura': { lat: -2.5, lon: 140.7 },
@@ -871,7 +1030,6 @@ function getDefaultCoordsFromTimezone(tz) {
         return tzCoords[tz];
     }
 
-    // Try partial match
     var keys = Object.keys(tzCoords);
     for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
@@ -880,27 +1038,25 @@ function getDefaultCoordsFromTimezone(tz) {
         }
     }
 
-    // Default to Jakarta
     return { lat: -6.2, lon: 106.8 };
 }
 
 async function fetchWeather(lat, lon, isAccurateCoords) {
-    // If we already have weather from accurate coords, don't overwrite with fallback
     if (weatherLoadedWithCoords && !isAccurateCoords) return;
 
     try {
-        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto';
-        const response = await fetchWithTimeout(url, {}, 8000);
+        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto';
+        var response = await fetchWithTimeout(url, {}, 8000);
 
         if (!response.ok) throw new Error('Weather API returned ' + response.status);
 
-        const data = await response.json();
+        var data = await response.json();
 
         if (data && data.current) {
-            const temp = data.current.temperature_2m;
-            const humidity = data.current.relative_humidity_2m;
-            const windSpeed = data.current.wind_speed_10m;
-            const weatherCode = data.current.weather_code;
+            var temp = data.current.temperature_2m;
+            var humidity = data.current.relative_humidity_2m;
+            var windSpeed = data.current.wind_speed_10m;
+            var weatherCode = data.current.weather_code;
 
             document.getElementById('weatherTemp').textContent = Math.round(temp) + '\u00B0C';
             document.getElementById('weatherDesc').textContent = getWeatherDescription(weatherCode);
@@ -920,7 +1076,6 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
         }
     } catch (err) {
         console.error('Weather fetch error:', err);
-        // Only show error if we haven't loaded weather yet
         if (!weatherLoadedWithCoords) {
             document.getElementById('weatherDesc').textContent = 'Weather unavailable';
             document.getElementById('weatherEmoji').textContent = '\u2753';
@@ -930,7 +1085,7 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
 }
 
 function getWeatherDescription(code) {
-    const descriptions = {
+    var descriptions = {
         0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
         45: 'Foggy', 48: 'Depositing rime fog',
         51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
@@ -963,10 +1118,10 @@ function getWeatherEmoji(code) {
 var HISTORY_KEY = 'netpulse-history';
 
 function initHistory() {
-    const historyBtn = document.getElementById('historyBtn');
-    const historyPanel = document.getElementById('historyPanel');
-    const historyClose = document.getElementById('historyClose');
-    const historyClear = document.getElementById('historyClear');
+    var historyBtn = document.getElementById('historyBtn');
+    var historyPanel = document.getElementById('historyPanel');
+    var historyClose = document.getElementById('historyClose');
+    var historyClear = document.getElementById('historyClear');
 
     historyBtn.addEventListener('click', function() {
         historyPanel.classList.toggle('open');
@@ -993,18 +1148,18 @@ function initHistory() {
 }
 
 function saveTestResult(result) {
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
     history.unshift(result);
     if (history.length > 20) history.pop();
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
 function renderHistory() {
-    const historyList = document.getElementById('historyList');
-    const historyEmpty = document.getElementById('historyEmpty');
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    var historyList = document.getElementById('historyList');
+    var historyEmpty = document.getElementById('historyEmpty');
+    var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
-    const existingItems = historyList.querySelectorAll('.history-item');
+    var existingItems = historyList.querySelectorAll('.history-item');
     existingItems.forEach(function(item) { item.remove(); });
 
     if (history.length === 0) {
@@ -1015,11 +1170,11 @@ function renderHistory() {
     historyEmpty.style.display = 'none';
 
     history.forEach(function(result) {
-        const item = document.createElement('div');
+        var item = document.createElement('div');
         item.className = 'history-item';
 
-        const date = new Date(result.timestamp);
-        const timeStr = date.toLocaleString('en-US', {
+        var date = new Date(result.timestamp);
+        var timeStr = date.toLocaleString('en-US', {
             month: 'short', day: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
