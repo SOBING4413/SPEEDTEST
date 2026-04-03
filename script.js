@@ -945,7 +945,6 @@ function getWeatherDescription(code) {
     return descriptions[code] || 'Unknown';
 }
 
-// FIX: getWeatherEmoji had syntax errors on lines 945-948 in original code
 function getWeatherEmoji(code) {
     if (code === 0) return '\u2600\uFE0F';
     if (code <= 2) return '\u26C5';
@@ -961,7 +960,6 @@ function getWeatherEmoji(code) {
 }
 
 // ===== HISTORY =====
-// FIX: Was "HISTORY_EY" (typo), now correctly "HISTORY_KEY"
 var HISTORY_KEY = 'netpulse-history';
 
 function initHistory() {
