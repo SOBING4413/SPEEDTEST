@@ -147,19 +147,18 @@
     box-sizing: border-box;
 }
 
-/* FIX: Apply background and overflow to html to prevent white lines */
 html {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg-primary);
     overflow-x: hidden;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 html::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none;
 }
 
 body {
@@ -176,12 +175,12 @@ body {
     overflow-x: hidden;
     overflow-y: auto;
     position: relative;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 body::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+    display: none;
 }
 
 /* ===== Background ===== */
@@ -764,6 +763,99 @@ body::-webkit-scrollbar {
     margin-top: 4px;
 }
 
+/* ===== Live Graph Section ===== */
+.live-graph-section {
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.5s ease, max-height 0.5s ease;
+}
+
+.live-graph-section.visible {
+    opacity: 1;
+    max-height: 120px;
+}
+
+#liveGraphCanvas {
+    width: 100%;
+    height: 80px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(var(--accent-rgb), 0.1);
+}
+
+.graph-label {
+    text-align: center;
+    font-size: 9px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    margin-top: 4px;
+    opacity: 0.6;
+}
+
+/* ===== Test Progress Bar ===== */
+.test-progress-bar {
+    padding: 4px 24px 8px;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease, max-height 0.4s ease;
+}
+
+.test-progress-bar.visible {
+    opacity: 1;
+    max-height: 50px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--operator));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 0.5px;
+}
+
 /* ===== Results Section ===== */
 .results-section {
     display: flex;
@@ -781,6 +873,11 @@ body::-webkit-scrollbar {
     gap: 10px;
     flex: 1;
     justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.result-item:hover {
+    transform: translateY(-2px);
 }
 
 .result-icon {
@@ -801,21 +898,45 @@ body::-webkit-scrollbar {
 .download-icon {
     background: rgba(var(--accent-rgb), 0.12);
     color: var(--download-color);
+    box-shadow: 0 0 0 rgba(var(--accent-rgb), 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.download-icon.glow {
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3);
 }
 
 .upload-icon {
     background: rgba(var(--accent2-rgb), 0.12);
     color: var(--upload-color);
+    box-shadow: 0 0 0 rgba(var(--accent2-rgb), 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.upload-icon.glow {
+    box-shadow: 0 0 20px rgba(var(--accent2-rgb), 0.3);
 }
 
 .ping-icon {
     background: rgba(74, 222, 128, 0.12);
     color: var(--ping-color);
+    box-shadow: 0 0 0 rgba(74, 222, 128, 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.ping-icon.glow {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
 }
 
 .jitter-icon {
     background: rgba(251, 191, 36, 0.12);
     color: var(--jitter-color);
+    box-shadow: 0 0 0 rgba(251, 191, 36, 0);
+    transition: box-shadow 0.3s ease;
+}
+
+.jitter-icon.glow {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
 }
 
 .result-info {
@@ -837,6 +958,11 @@ body::-webkit-scrollbar {
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.2;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.result-value.highlight {
+    text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4);
 }
 
 .result-unit {
@@ -1277,6 +1403,14 @@ body::-webkit-scrollbar {
 
     .phase-line {
         width: 20px;
+    }
+
+    .live-graph-section {
+        padding: 0 16px;
+    }
+
+    .test-progress-bar {
+        padding: 4px 16px 8px;
     }
 }
 
