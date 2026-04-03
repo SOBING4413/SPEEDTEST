@@ -1,4 +1,4 @@
-// ===== NetPulse Real Speed Test - FIXED =====
+// ===== NetPulse Real Speed Test - ALL BUGS FIXED =====
 
 document.addEventListener('DOMContentLoaded', function () {
     initClock();
@@ -43,8 +43,8 @@ function initThemeSwitcher() {
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateActiveThemeBtn(savedTheme);
 
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+    document.querySelectorAll('.theme-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
             const theme = btn.getAttribute('data-theme');
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('netpulse-theme', theme);
@@ -54,7 +54,7 @@ function initThemeSwitcher() {
 }
 
 function updateActiveThemeBtn(theme) {
-    document.querySelectorAll('.theme-btn').forEach(btn => {
+    document.querySelectorAll('.theme-btn').forEach(function(btn) {
         btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
     });
 }
@@ -80,58 +80,65 @@ function initParticles() {
 
     const PARTICLE_COUNT = 50;
 
-    class Particle {
-        constructor() {
-            this.reset();
+    function createParticle() {
+        return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 0.5,
+            speedX: (Math.random() - 0.5) * 0.4,
+            speedY: (Math.random() - 0.5) * 0.4,
+            opacity: Math.random() * 0.5 + 0.1,
+            fadeSpeed: Math.random() * 0.005 + 0.002,
+            growing: Math.random() > 0.5
+        };
+    }
+
+    function resetParticle(p) {
+        p.x = Math.random() * canvas.width;
+        p.y = Math.random() * canvas.height;
+        p.size = Math.random() * 2 + 0.5;
+        p.speedX = (Math.random() - 0.5) * 0.4;
+        p.speedY = (Math.random() - 0.5) * 0.4;
+        p.opacity = Math.random() * 0.5 + 0.1;
+        p.fadeSpeed = Math.random() * 0.005 + 0.002;
+        p.growing = Math.random() > 0.5;
+    }
+
+    function updateParticle(p) {
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        if (p.growing) {
+            p.opacity += p.fadeSpeed;
+            if (p.opacity >= 0.6) p.growing = false;
+        } else {
+            p.opacity -= p.fadeSpeed;
+            if (p.opacity <= 0.05) p.growing = true;
         }
 
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 2 + 0.5;
-            this.speedX = (Math.random() - 0.5) * 0.4;
-            this.speedY = (Math.random() - 0.5) * 0.4;
-            this.opacity = Math.random() * 0.5 + 0.1;
-            this.fadeSpeed = Math.random() * 0.005 + 0.002;
-            this.growing = Math.random() > 0.5;
-        }
-
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
-
-            if (this.growing) {
-                this.opacity += this.fadeSpeed;
-                if (this.opacity >= 0.6) this.growing = false;
-            } else {
-                this.opacity -= this.fadeSpeed;
-                if (this.opacity <= 0.05) this.growing = true;
-            }
-
-            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-                this.reset();
-            }
-        }
-
-        draw() {
-            const style = getComputedStyle(document.documentElement);
-            const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fillStyle = color.replace(/[\d.]+\)$/, `${this.opacity})`);
-            ctx.fill();
+        if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+            resetParticle(p);
         }
     }
 
+    function drawParticle(p) {
+        const style = getComputedStyle(document.documentElement);
+        const color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = color.replace(/[\d.]+\)$/, p.opacity + ')');
+        ctx.fill();
+    }
+
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-        particles.push(new Particle());
+        particles.push(createParticle());
     }
 
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-            p.update();
-            p.draw();
+        particles.forEach(function(p) {
+            updateParticle(p);
+            drawParticle(p);
         });
 
         for (let i = 0; i < particles.length; i++) {
@@ -146,7 +153,7 @@ function initParticles() {
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = color.replace(/[\d.]+\)$/, `${opacity})`);
+                    ctx.strokeStyle = color.replace(/[\d.]+\)$/, opacity + ')');
                     ctx.lineWidth = 0.5;
                     ctx.stroke();
                 }
@@ -160,8 +167,8 @@ function initParticles() {
 }
 
 // ===== GAUGE =====
-let gaugeProgressEl;
-const GAUGE_ARC_LENGTH = 314;
+var gaugeProgressEl;
+var GAUGE_ARC_LENGTH = 314;
 
 function initGauge() {
     gaugeProgressEl = document.getElementById('gaugeProgress');
@@ -198,7 +205,7 @@ function initGauge() {
     const cx = 130, cy = 140, r = 100;
     const tickValues = [0, 25, 50, 75, 100, 150, 200, 300, 500];
 
-    tickValues.forEach(val => {
+    tickValues.forEach(function(val) {
         const maxVal = 500;
         const ratio = val / maxVal;
         const angle = Math.PI + ratio * Math.PI;
@@ -229,7 +236,8 @@ function initGauge() {
     setGaugeValue(0);
 }
 
-function setGaugeValue(value, maxValue = 500) {
+function setGaugeValue(value, maxValue) {
+    if (maxValue === undefined) maxValue = 500;
     const ratio = Math.min(value / maxValue, 1);
     const offset = GAUGE_ARC_LENGTH * (1 - ratio);
     if (gaugeProgressEl) {
@@ -245,7 +253,7 @@ function setPhase(phase) {
     const phases = ['ping', 'download', 'upload'];
     const currentIndex = phases.indexOf(phase);
 
-    steps.forEach((step, i) => {
+    steps.forEach(function(step, i) {
         step.classList.remove('active', 'completed');
         if (i < currentIndex) {
             step.classList.add('completed');
@@ -254,7 +262,7 @@ function setPhase(phase) {
         }
     });
 
-    lines.forEach((line, i) => {
+    lines.forEach(function(line, i) {
         line.classList.remove('active');
         if (i < currentIndex) {
             line.classList.add('active');
@@ -263,24 +271,24 @@ function setPhase(phase) {
 }
 
 function resetPhases() {
-    document.querySelectorAll('.phase-step').forEach(s => s.classList.remove('active', 'completed'));
-    document.querySelectorAll('.phase-line').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('.phase-step').forEach(function(s) { s.classList.remove('active', 'completed'); });
+    document.querySelectorAll('.phase-line').forEach(function(l) { l.classList.remove('active'); });
 }
 
 function completeAllPhases() {
-    document.querySelectorAll('.phase-step').forEach(s => {
+    document.querySelectorAll('.phase-step').forEach(function(s) {
         s.classList.remove('active');
         s.classList.add('completed');
     });
-    document.querySelectorAll('.phase-line').forEach(l => l.classList.add('active'));
+    document.querySelectorAll('.phase-line').forEach(function(l) { l.classList.add('active'); });
 }
 
 // ===== REAL SPEED TEST =====
-let isTesting = false;
+var isTesting = false;
 
 function initSpeedTest() {
     const startBtn = document.getElementById('startBtn');
-    startBtn.addEventListener('click', () => {
+    startBtn.addEventListener('click', function() {
         if (isTesting) return;
         runSpeedTest();
     });
@@ -298,7 +306,7 @@ async function realPingTest() {
 
     for (let i = 0; i < iterations; i++) {
         try {
-            const cacheBuster = `?cb=${Date.now()}-${Math.random()}`;
+            const cacheBuster = '?cb=' + Date.now() + '-' + Math.random();
             const start = performance.now();
             await fetch(url + cacheBuster, {
                 method: 'GET',
@@ -312,7 +320,7 @@ async function realPingTest() {
             document.getElementById('gaugeValue').textContent = latency.toFixed(1);
         } catch (e) {
             try {
-                const cacheBuster = `?cb=${Date.now()}-${Math.random()}`;
+                const cacheBuster = '?cb=' + Date.now() + '-' + Math.random();
                 const start = performance.now();
                 await fetch(url + cacheBuster, {
                     method: 'HEAD',
@@ -334,11 +342,11 @@ async function realPingTest() {
         return { ping: 0, jitter: 0 };
     }
 
-    pings.sort((a, b) => a - b);
+    pings.sort(function(a, b) { return a - b; });
     const trimCount = Math.floor(pings.length * 0.1);
     const trimmedPings = pings.slice(trimCount, pings.length - trimCount);
 
-    const avgPing = trimmedPings.reduce((a, b) => a + b, 0) / trimmedPings.length;
+    const avgPing = trimmedPings.reduce(function(a, b) { return a + b; }, 0) / trimmedPings.length;
 
     let jitterSum = 0;
     for (let i = 1; i < trimmedPings.length; i++) {
@@ -374,7 +382,7 @@ async function realDownloadTest() {
         if (performance.now() - startTime > testDuration) break;
 
         try {
-            const url = `https://speed.cloudflare.com/__down?bytes=${test.size}&cacheBuster=${Date.now()}`;
+            const url = 'https://speed.cloudflare.com/__down?bytes=' + test.size + '&cacheBuster=' + Date.now();
             const fetchStart = performance.now();
 
             const response = await fetch(url, { cache: 'no-store' });
@@ -385,10 +393,10 @@ async function realDownloadTest() {
             let receivedBytes = 0;
 
             while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+                const result = await reader.read();
+                if (result.done) break;
 
-                receivedBytes += value.length;
+                receivedBytes += result.value.length;
                 const elapsed = (performance.now() - fetchStart) / 1000;
 
                 if (elapsed > 0) {
@@ -415,7 +423,7 @@ async function realDownloadTest() {
         } catch (e) {
             console.warn('Download test chunk failed:', e);
             try {
-                const altUrl = `https://speed.cloudflare.com/__down?bytes=${Math.min(test.size, 1e6)}&cacheBuster=${Date.now()}-alt`;
+                const altUrl = 'https://speed.cloudflare.com/__down?bytes=' + Math.min(test.size, 1e6) + '&cacheBuster=' + Date.now() + '-alt';
                 const fetchStart = performance.now();
                 const response = await fetch(altUrl, { cache: 'no-store' });
                 const blob = await response.blob();
@@ -438,10 +446,10 @@ async function realDownloadTest() {
 
     if (speedSamples.length > 0) {
         if (speedSamples.length > 2) {
-            speedSamples.sort((a, b) => a - b);
+            speedSamples.sort(function(a, b) { return a - b; });
             speedSamples.shift();
         }
-        const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+        const avgSpeed = speedSamples.reduce(function(a, b) { return a + b; }, 0) / speedSamples.length;
         return avgSpeed;
     }
 
@@ -481,7 +489,7 @@ async function realUploadTest() {
             }
 
             const blob = new Blob([data]);
-            const url = `https://speed.cloudflare.com/__up?cacheBuster=${Date.now()}`;
+            const url = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now();
 
             const fetchStart = performance.now();
             const response = await fetch(url, {
@@ -507,7 +515,7 @@ async function realUploadTest() {
                 const smallSize = Math.min(size, 5e5);
                 const data = new ArrayBuffer(smallSize);
                 const blob = new Blob([data]);
-                const url = `https://speed.cloudflare.com/__up?cacheBuster=${Date.now()}-retry`;
+                const url = 'https://speed.cloudflare.com/__up?cacheBuster=' + Date.now() + '-retry';
 
                 const fetchStart = performance.now();
                 await fetch(url, { method: 'POST', body: blob, cache: 'no-store' });
@@ -528,17 +536,17 @@ async function realUploadTest() {
 
     if (speedSamples.length > 0) {
         if (speedSamples.length > 2) {
-            speedSamples.sort((a, b) => a - b);
+            speedSamples.sort(function(a, b) { return a - b; });
             speedSamples.shift();
         }
-        return speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+        return speedSamples.reduce(function(a, b) { return a + b; }, 0) / speedSamples.length;
     }
 
     return 0;
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
 }
 
 async function runSpeedTest() {
@@ -555,9 +563,9 @@ async function runSpeedTest() {
 
     try {
         // Phase 1: Ping Test
-        const { ping, jitter } = await realPingTest();
-        document.getElementById('pingResult').textContent = ping.toFixed(1);
-        document.getElementById('jitterResult').textContent = jitter.toFixed(1);
+        const pingResult = await realPingTest();
+        document.getElementById('pingResult').textContent = pingResult.ping.toFixed(1);
+        document.getElementById('jitterResult').textContent = pingResult.jitter.toFixed(1);
 
         await sleep(300);
 
@@ -579,7 +587,7 @@ async function runSpeedTest() {
         document.getElementById('gaugeValue').textContent = download.toFixed(1);
 
         // Save to history
-        saveTestResult({ download, upload, ping, jitter, timestamp: Date.now() });
+        saveTestResult({ download: download, upload: upload, ping: pingResult.ping, jitter: pingResult.jitter, timestamp: Date.now() });
         renderHistory();
 
     } catch (err) {
@@ -593,17 +601,19 @@ async function runSpeedTest() {
     startBtn.querySelector('.start-btn-text').textContent = 'START TEST';
 }
 
-// ===== IP INFO & WEATHER (FULLY FIXED) =====
+// ===== IP INFO & WEATHER (ALL BUGS FIXED) =====
 
 // Track if weather has been loaded with good coords
-let weatherLoadedWithCoords = false;
+var weatherLoadedWithCoords = false;
 
 // Helper: fetch with timeout
-function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+function fetchWithTimeout(url, options, timeoutMs) {
+    if (!options) options = {};
+    if (!timeoutMs) timeoutMs = 5000;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => clearTimeout(timeoutId));
+    const timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+        .finally(function() { clearTimeout(timeoutId); });
 }
 
 // Start weather immediately using timezone-based coords (don't wait for IP)
@@ -615,7 +625,7 @@ function startWeatherFallback() {
 
 // ===== ROBUST IP DETECTION WITH 6 FALLBACK STRATEGIES =====
 async function fetchIPInfo() {
-    let ipData = null;
+    var ipData = null;
 
     // Strategy 1: Cloudflare trace (most reliable, always works, no CORS issues)
     if (!ipData) {
@@ -624,7 +634,7 @@ async function fetchIPInfo() {
             if (response.ok) {
                 const text = await response.text();
                 const cfData = {};
-                text.split('\n').forEach(line => {
+                text.split('\n').forEach(function(line) {
                     const idx = line.indexOf('=');
                     if (idx > 0) {
                         cfData[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
@@ -720,7 +730,7 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 5: ip-api.com (may have CORS issues on HTTPS but try)
+    // Strategy 5: ip-api.com
     if (!ipData || ipData.partial) {
         try {
             const response = await fetchWithTimeout(
@@ -748,7 +758,7 @@ async function fetchIPInfo() {
         }
     }
 
-    // Strategy 6: freeipapi.com (another CORS-friendly option)
+    // Strategy 6: freeipapi.com
     if (!ipData || ipData.partial) {
         try {
             const response = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
@@ -757,12 +767,12 @@ async function fetchIPInfo() {
                 if (data && data.ipAddress) {
                     ipData = {
                         ip: data.ipAddress,
-                        isp: data.isp || ipData?.isp || 'Unknown',
-                        city: data.cityName || ipData?.city || null,
-                        country: data.countryName || ipData?.country || null,
-                        lat: data.latitude || ipData?.lat,
-                        lon: data.longitude || ipData?.lon,
-                        timezone: data.timeZone || ipData?.timezone,
+                        isp: data.isp || (ipData ? ipData.isp : null) || 'Unknown',
+                        city: data.cityName || (ipData ? ipData.city : null) || null,
+                        country: data.countryName || (ipData ? ipData.country : null) || null,
+                        lat: data.latitude || (ipData ? ipData.lat : null),
+                        lon: data.longitude || (ipData ? ipData.lon : null),
+                        timezone: data.timeZone || (ipData ? ipData.timezone : null),
                         partial: false
                     };
                 }
@@ -775,22 +785,24 @@ async function fetchIPInfo() {
     // Update UI with whatever we got
     if (ipData) {
         document.getElementById('ipAddress').textContent = ipData.ip;
-        document.getElementById('ipISP').textContent = `ISP: ${ipData.isp || 'Unknown'}`;
+        document.getElementById('ipISP').textContent = 'ISP: ' + (ipData.isp || 'Unknown');
 
         const city = ipData.city || '--';
         const country = ipData.country || '--';
-        document.getElementById('ipLocation').textContent = city !== '--' || country !== '--'
-            ? `${city}, ${country}`
-            : 'Location: --';
+        if (city !== '--' || country !== '--') {
+            document.getElementById('ipLocation').textContent = city + ', ' + country;
+        } else {
+            document.getElementById('ipLocation').textContent = 'Location: --';
+        }
 
-        document.getElementById('serverName').textContent = `Cloudflare CDN (${city !== '--' ? city : 'Auto'})`;
+        document.getElementById('serverName').textContent = 'Cloudflare CDN (' + (city !== '--' ? city : 'Auto') + ')';
 
         // Update weather with better coordinates if available
         if (ipData.lat && ipData.lon && !weatherLoadedWithCoords) {
             fetchWeather(ipData.lat, ipData.lon, true);
         }
     } else {
-        // All strategies failed - show IP as unavailable but don't leave it stuck on "Detecting..."
+        // All strategies failed
         document.getElementById('ipAddress').textContent = 'Could not detect';
         document.getElementById('ipISP').textContent = 'ISP: --';
         document.getElementById('ipLocation').textContent = 'Location: --';
@@ -804,13 +816,12 @@ async function fetchIPInfo() {
 function tryBrowserGeolocation() {
     if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            function(position) {
                 if (!weatherLoadedWithCoords) {
                     fetchWeather(position.coords.latitude, position.coords.longitude, true);
                 }
             },
-            () => {
-                // Geolocation denied/failed - weather fallback already running from startWeatherFallback()
+            function() {
                 console.warn('Geolocation denied or failed');
             },
             { timeout: 5000 }
@@ -861,9 +872,11 @@ function getDefaultCoordsFromTimezone(tz) {
     }
 
     // Try partial match
-    for (const [key, coords] of Object.entries(tzCoords)) {
+    var keys = Object.keys(tzCoords);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
         if (tz && tz.includes(key.split('/')[1])) {
-            return coords;
+            return tzCoords[key];
         }
     }
 
@@ -876,10 +889,10 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
     if (weatherLoadedWithCoords && !isAccurateCoords) return;
 
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto';
         const response = await fetchWithTimeout(url, {}, 8000);
 
-        if (!response.ok) throw new Error(`Weather API returned ${response.status}`);
+        if (!response.ok) throw new Error('Weather API returned ' + response.status);
 
         const data = await response.json();
 
@@ -889,17 +902,15 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
             const windSpeed = data.current.wind_speed_10m;
             const weatherCode = data.current.weather_code;
 
-            document.getElementById('weatherTemp').textContent = `${Math.round(temp)}°C`;
+            document.getElementById('weatherTemp').textContent = Math.round(temp) + '\u00B0C';
             document.getElementById('weatherDesc').textContent = getWeatherDescription(weatherCode);
             document.getElementById('weatherEmoji').textContent = getWeatherEmoji(weatherCode);
-            document.getElementById('weatherHumidity').innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                ${humidity}%
-            `;
-            document.getElementById('weatherWind').innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
-                ${windSpeed} km/h
-            `;
+            document.getElementById('weatherHumidity').innerHTML =
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg> ' +
+                humidity + '%';
+            document.getElementById('weatherWind').innerHTML =
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg> ' +
+                windSpeed + ' km/h';
 
             if (isAccurateCoords) {
                 weatherLoadedWithCoords = true;
@@ -912,8 +923,8 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
         // Only show error if we haven't loaded weather yet
         if (!weatherLoadedWithCoords) {
             document.getElementById('weatherDesc').textContent = 'Weather unavailable';
-            document.getElementById('weatherEmoji').textContent = '❓';
-            document.getElementById('weatherTemp').textContent = '--°C';
+            document.getElementById('weatherEmoji').textContent = '\u2753';
+            document.getElementById('weatherTemp').textContent = '--\u00B0C';
         }
     }
 }
@@ -934,22 +945,24 @@ function getWeatherDescription(code) {
     return descriptions[code] || 'Unknown';
 }
 
+// FIX: getWeatherEmoji had syntax errors on lines 945-948 in original code
 function getWeatherEmoji(code) {
-    if (code === 0) return '☀️';
-    if (code <= 2) return '⛅';
-    if (code === 3) return '☁️';
-    if (code <= 48) return '🌫️';
-    if (code <= 57) return '🌦️';
-    if (code <= 67) return '🌧️';
-    if (code <= 77) return '🌨️';
-    if (code <= 82 return '🌧️';
-    icode <= 86) return '🌨️';
-    if (code >= 95) return '⛈️';
-   return '🌤️';
+    if (code === 0) return '\u2600\uFE0F';
+    if (code <= 2) return '\u26C5';
+    if (code === 3) return '\u2601\uFE0F';
+    if (code <= 48) return '\uD83C\uDF2B\uFE0F';
+    if (code <= 57) return '\uD83C\uDF26\uFE0F';
+    if (code <= 67) return '\uD83C\uDF27\uFE0F';
+    if (code <= 77) return '\uD83C\uDF28\uFE0F';
+    if (code <= 82) return '\uD83C\uDF27\uFE0F';
+    if (code <= 86) return '\uD83C\uDF28\uFE0F';
+    if (code >= 95) return '\u26C8\uFE0F';
+    return '\uD83C\uDF24\uFE0F';
 }
 
 // ===== HISTORY =====
-const HISTORY_EY = 'netpulse-history';
+// FIX: Was "HISTORY_EY" (typo), now correctly "HISTORY_KEY"
+var HISTORY_KEY = 'netpulse-history';
 
 function initHistory() {
     const historyBtn = document.getElementById('historyBtn');
@@ -957,20 +970,20 @@ function initHistory() {
     const historyClose = document.getElementById('historyClose');
     const historyClear = document.getElementById('historyClear');
 
-    historyBtn.addEventListener('click', () => {
+    historyBtn.addEventListener('click', function() {
         historyPanel.classList.toggle('open');
     });
 
-    historyClose.addEventListener('click', () => {
+    historyClose.addEventListener('click', function() {
         historyPanel.classList.remove('open');
     });
 
-    historyClear.addEventListener('click', () => {
+    historyClear.addEventListener('click', function() {
         localStorage.removeItem(HISTORY_KEY);
         renderHistory();
     });
 
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', function(e) {
         if (historyPanel.classList.contains('open') &&
             !historyPanel.contains(e.target) &&
             !document.getElementById('historyBtn').contains(e.target)) {
@@ -994,7 +1007,7 @@ function renderHistory() {
     const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
     const existingItems = historyList.querySelectorAll('.history-item');
-    existingItems.forEach(item => item.remove());
+    existingItems.forEach(function(item) { item.remove(); });
 
     if (history.length === 0) {
         historyEmpty.style.display = 'flex';
@@ -1003,7 +1016,7 @@ function renderHistory() {
 
     historyEmpty.style.display = 'none';
 
-    history.forEach(result => {
+    history.forEach(function(result) {
         const item = document.createElement('div');
         item.className = 'history-item';
 
@@ -1013,31 +1026,31 @@ function renderHistory() {
             hour: '2-digit', minute: '2-digit'
         });
 
-        const jitterHtml = result.jitter !== undefined
-            ? `<div class="history-stat">
-                    <span class="history-stat-label">Jitter</span>
-                    <span class="history-stat-value jitter-val">${result.jitter.toFixed(1)}</span>
-                </div>`
-            : '';
+        var jitterHtml = '';
+        if (result.jitter !== undefined) {
+            jitterHtml = '<div class="history-stat">' +
+                '<span class="history-stat-label">Jitter</span>' +
+                '<span class="history-stat-value jitter-val">' + result.jitter.toFixed(1) + '</span>' +
+                '</div>';
+        }
 
-        item.innerHTML = `
-            <div class="history-item-time">${timeStr}</div>
-            <div class="history-item-results">
-                <div class="history-stat">
-                    <span class="history-stat-label">Download</span>
-                    <span class="history-stat-value">${result.download.toFixed(1)}</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-label">Upload</span>
-                    <span class="history-stat-value upload-val">${result.upload.toFixed(1)}</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-label">Ping</span>
-                    <span class="history-stat-value ping-val">${result.ping.toFixed(1)}</span>
-                </div>
-                ${jitterHtml}
-            </div>
-        `;
+        item.innerHTML =
+            '<div class="history-item-time">' + timeStr + '</div>' +
+            '<div class="history-item-results">' +
+                '<div class="history-stat">' +
+                    '<span class="history-stat-label">Download</span>' +
+                    '<span class="history-stat-value">' + result.download.toFixed(1) + '</span>' +
+                '</div>' +
+                '<div class="history-stat">' +
+                    '<span class="history-stat-label">Upload</span>' +
+                    '<span class="history-stat-value upload-val">' + result.upload.toFixed(1) + '</span>' +
+                '</div>' +
+                '<div class="history-stat">' +
+                    '<span class="history-stat-label">Ping</span>' +
+                    '<span class="history-stat-value ping-val">' + result.ping.toFixed(1) + '</span>' +
+                '</div>' +
+                jitterHtml +
+            '</div>';
 
         historyList.appendChild(item);
     });
