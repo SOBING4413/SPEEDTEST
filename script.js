@@ -11,6 +11,40 @@ document.addEventListener('DOMContentLoaded', function () {
     fetchIPInfo();
 });
 
+var APP_CONFIG = {
+    graph: {
+        maxPoints: 100,
+    },
+    particles: {
+        mobileBreakpoint: 768,
+        count: 50,
+        connectionDistance: 120,
+    },
+    speedTest: {
+        maxGaugeMbps: 500,
+        pingGaugeMaxMs: 200,
+        pingIterations: 30,
+        pingDelayMs: 120,
+        interPhaseDelayMs: 300,
+        postTestHideProgressDelayMs: 2000,
+        testDurationMs: {
+            download: 12000,
+            upload: 12000,
+        },
+        downloadSizes: [1e5, 5e5, 1e6, 5e6, 10e6, 25e6, 25e6, 25e6],
+        uploadSizes: [1e5, 5e5, 1e6, 2e6, 5e6, 5e6, 5e6],
+        maxHistoryItems: 20,
+    },
+    network: {
+        timeoutMs: {
+            default: 5000,
+            weather: 8000,
+            ipapi: 6000,
+            ipwho: 6000,
+        },
+    },
+};
+
 // ===== CLOCK =====
 function initClock() {
     function updateClock() {
@@ -71,10 +105,10 @@ function initParticles() {
     resize();
     window.addEventListener('resize', resize);
 
-    var isMobile = window.innerWidth <= 768;
+    var isMobile = window.innerWidth <= APP_CONFIG.particles.mobileBreakpoint;
     if (isMobile) return;
 
-    var PARTICLE_COUNT = 50;
+    var PARTICLE_COUNT = APP_CONFIG.particles.count;
 
     function createParticle() {
         return {
@@ -142,10 +176,10 @@ function initParticles() {
                 var dx = particles[i].x - particles[j].x;
                 var dy = particles[i].y - particles[j].y;
                 var dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 120) {
+                if (dist < APP_CONFIG.particles.connectionDistance) {
                     var style = getComputedStyle(document.documentElement);
                     var color = style.getPropertyValue('--particle-color').trim() || 'rgba(56, 189, 248, 0.4)';
-                    var opacity = (1 - dist / 120) * 0.15;
+                    var opacity = (1 - dist / APP_CONFIG.particles.connectionDistance) * 0.15;
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
@@ -233,7 +267,7 @@ function initGauge() {
 }
 
 function setGaugeValue(value, maxValue) {
-    if (maxValue === undefined) maxValue = 500;
+    if (maxValue === undefined) maxValue = APP_CONFIG.speedTest.maxGaugeMbps;
     var ratio = Math.min(value / maxValue, 1);
     var offset = GAUGE_ARC_LENGTH * (1 - ratio);
     if (gaugeProgressEl) {
@@ -281,7 +315,7 @@ function completeAllPhases() {
 
 // ===== LIVE GRAPH =====
 var graphData = [];
-var graphMaxPoints = 100;
+var graphMaxPoints = APP_CONFIG.graph.maxPoints;
 
 function showGraph() {
     var section = document.getElementById('liveGraphSection');
@@ -326,11 +360,7 @@ function drawGraph() {
     for (var i = 0; i < graphData.length; i++) {
         var x = (i / (graphMaxPoints - 1)) * w;
         var y = h - (graphData[i] / maxVal) * (h - 10);
-        if (i === 0) {
-            ctx.lineTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        ctx.lineTo(x, y);
     }
     var lastX = ((graphData.length - 1) / (graphMaxPoints - 1)) * w;
     ctx.lineTo(lastX, h);
@@ -377,7 +407,10 @@ function drawGraph() {
 
 // ===== PROGRESS BAR =====
 var testStartTime = 0;
-var totalTestDuration = 28000; // ~28 seconds total
+var totalTestDuration =
+    APP_CONFIG.speedTest.testDurationMs.download +
+    APP_CONFIG.speedTest.testDurationMs.upload +
+    APP_CONFIG.speedTest.pingIterations * APP_CONFIG.speedTest.pingDelayMs;
 
 function showProgressBar() {
     var bar = document.getElementById('testProgressBar');
@@ -416,7 +449,7 @@ function initSpeedTest() {
 async function realPingTest() {
     var url = 'https://www.cloudflare.com/cdn-cgi/trace';
     var pings = [];
-    var iterations = 30; // Extended from 20 to 30
+    var iterations = APP_CONFIG.speedTest.pingIterations;
 
     document.getElementById('gaugeLabel').textContent = 'Testing Ping';
     document.getElementById('gaugeUnit').textContent = 'ms';
@@ -440,7 +473,7 @@ async function realPingTest() {
             var end = performance.now();
             var latency = end - start;
             pings.push(latency);
-            setGaugeValue(latency, 200);
+            setGaugeValue(latency, APP_CONFIG.speedTest.pingGaugeMaxMs);
             document.getElementById('gaugeValue').textContent = latency.toFixed(1);
 
             // Update ping result in real-time
@@ -471,13 +504,13 @@ async function realPingTest() {
                 });
                 var end2 = performance.now();
                 pings.push(end2 - start2);
-                setGaugeValue(end2 - start2, 200);
+                setGaugeValue(end2 - start2, APP_CONFIG.speedTest.pingGaugeMaxMs);
                 document.getElementById('gaugeValue').textContent = (end2 - start2).toFixed(1);
             } catch (e2) {
                 // skip failed ping
             }
         }
-        await sleep(120);
+        await sleep(APP_CONFIG.speedTest.pingDelayMs);
     }
 
     if (pingIcon) pingIcon.classList.remove('glow');
@@ -513,30 +546,21 @@ async function realDownloadTest() {
     var downloadIcon = document.querySelector('.download-icon');
     if (downloadIcon) downloadIcon.classList.add('glow');
 
-    var testSizes = [
-        { size: 1e5, label: '100KB' },
-        { size: 5e5, label: '500KB' },
-        { size: 1e6, label: '1MB' },
-        { size: 5e6, label: '5MB' },
-        { size: 10e6, label: '10MB' },
-        { size: 25e6, label: '25MB' },
-        { size: 25e6, label: '25MB-2' },
-        { size: 25e6, label: '25MB-3' },
-    ];
+    var testSizes = APP_CONFIG.speedTest.downloadSizes;
 
     var totalBytes = 0;
     var totalTime = 0;
     var currentSpeed = 0;
     var speedSamples = [];
-    var testDuration = 12000; // Extended to 12 seconds
+    var testDuration = APP_CONFIG.speedTest.testDurationMs.download;
     var startTime = performance.now();
 
     for (var t = 0; t < testSizes.length; t++) {
-        var test = testSizes[t];
+        var testSize = testSizes[t];
         if (performance.now() - startTime > testDuration) break;
 
         try {
-            var url = 'https://speed.cloudflare.com/__down?bytes=' + test.size + '&cacheBuster=' + Date.now();
+            var url = 'https://speed.cloudflare.com/__down?bytes=' + testSize + '&cacheBuster=' + Date.now();
             var fetchStart = performance.now();
 
             var response = await fetch(url, { cache: 'no-store' });
@@ -574,14 +598,14 @@ async function realDownloadTest() {
 
             updateProgress(performance.now() - testStartTime, totalTestDuration);
 
-            if (currentSpeed > 100 && test.size < 25e6) {
+            if (currentSpeed > 100 && testSize < 25e6) {
                 continue;
             }
 
         } catch (e) {
             console.warn('Download test chunk failed:', e);
             try {
-                var altUrl = 'https://speed.cloudflare.com/__down?bytes=' + Math.min(test.size, 1e6) + '&cacheBuster=' + Date.now() + '-alt';
+                var altUrl = 'https://speed.cloudflare.com/__down?bytes=' + Math.min(testSize, 1e6) + '&cacheBuster=' + Date.now() + '-alt';
                 var fetchStart2 = performance.now();
                 var response2 = await fetch(altUrl, { cache: 'no-store' });
                 var blob = await response2.blob();
@@ -632,18 +656,10 @@ async function realUploadTest() {
     var uploadIcon = document.querySelector('.upload-icon');
     if (uploadIcon) uploadIcon.classList.add('glow');
 
-    var testSizes = [
-        1e5,
-        5e5,
-        1e6,
-        2e6,
-        5e6,
-        5e6,
-        5e6,
-    ];
+    var testSizes = APP_CONFIG.speedTest.uploadSizes;
 
     var speedSamples = [];
-    var testDuration = 12000; // Extended to 12 seconds
+    var testDuration = APP_CONFIG.speedTest.testDurationMs.upload;
     var startTime = performance.now();
 
     for (var t = 0; t < testSizes.length; t++) {
@@ -752,14 +768,14 @@ async function runSpeedTest() {
         document.getElementById('pingResult').classList.add('highlight');
         document.getElementById('jitterResult').classList.add('highlight');
 
-        await sleep(300);
+        await sleep(APP_CONFIG.speedTest.interPhaseDelayMs);
 
         // Phase 2: Download Test (~12 seconds)
         var download = await realDownloadTest();
         document.getElementById('downloadResult').textContent = download.toFixed(2);
         document.getElementById('downloadResult').classList.add('highlight');
 
-        await sleep(300);
+        await sleep(APP_CONFIG.speedTest.interPhaseDelayMs);
 
         // Phase 3: Upload Test (~12 seconds)
         var upload = await realUploadTest();
@@ -795,7 +811,7 @@ async function runSpeedTest() {
     // Hide progress bar after a delay
     setTimeout(function() {
         hideProgressBar();
-    }, 2000);
+    }, APP_CONFIG.speedTest.postTestHideProgressDelayMs);
 }
 
 // ===== IP INFO & WEATHER =====
@@ -803,7 +819,7 @@ var weatherLoadedWithCoords = false;
 
 function fetchWithTimeout(url, options, timeoutMs) {
     if (!options) options = {};
-    if (!timeoutMs) timeoutMs = 5000;
+    if (!timeoutMs) timeoutMs = APP_CONFIG.network.timeoutMs.default;
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs);
     return fetch(url, Object.assign({}, options, { signal: controller.signal }))
@@ -822,7 +838,7 @@ async function fetchIPInfo() {
     // Strategy 1: Cloudflare trace
     if (!ipData) {
         try {
-            var response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, 5000);
+            var response = await fetchWithTimeout('https://www.cloudflare.com/cdn-cgi/trace', {}, APP_CONFIG.network.timeoutMs.default);
             if (response.ok) {
                 var text = await response.text();
                 var cfData = {};
@@ -847,7 +863,7 @@ async function fetchIPInfo() {
     // Strategy 2: ipapi.co
     if (!ipData || ipData.partial) {
         try {
-            var response2 = await fetchWithTimeout('https://ipapi.co/json/', {}, 6000);
+            var response2 = await fetchWithTimeout('https://ipapi.co/json/', {}, APP_CONFIG.network.timeoutMs.ipapi);
             if (response2.ok) {
                 var data2 = await response2.json();
                 if (data2 && data2.ip && !data2.error && !data2.reason) {
@@ -866,7 +882,7 @@ async function fetchIPInfo() {
     // Strategy 3: ipwho.is
     if (!ipData || ipData.partial) {
         try {
-            var response3 = await fetchWithTimeout('https://ipwho.is/', {}, 6000);
+            var response3 = await fetchWithTimeout('https://ipwho.is/', {}, APP_CONFIG.network.timeoutMs.ipwho);
             if (response3.ok) {
                 var data3 = await response3.json();
                 if (data3 && data3.success !== false && data3.ip) {
@@ -886,7 +902,7 @@ async function fetchIPInfo() {
     // Strategy 4: ipify.org
     if (!ipData) {
         try {
-            var response4 = await fetchWithTimeout('https://api.ipify.org?format=json', {}, 5000);
+            var response4 = await fetchWithTimeout('https://api.ipify.org?format=json', {}, APP_CONFIG.network.timeoutMs.default);
             if (response4.ok) {
                 var data4 = await response4.json();
                 if (data4 && data4.ip) {
@@ -906,7 +922,7 @@ async function fetchIPInfo() {
         try {
             var response5 = await fetchWithTimeout(
                 'https://ip-api.com/json/?fields=status,message,query,isp,city,country,lat,lon,timezone',
-                {}, 5000
+                {}, APP_CONFIG.network.timeoutMs.default
             );
             if (response5.ok) {
                 var data5 = await response5.json();
@@ -926,7 +942,7 @@ async function fetchIPInfo() {
     // Strategy 6: freeipapi.com
     if (!ipData || ipData.partial) {
         try {
-            var response6 = await fetchWithTimeout('https://freeipapi.com/api/json', {}, 5000);
+            var response6 = await fetchWithTimeout('https://freeipapi.com/api/json', {}, APP_CONFIG.network.timeoutMs.default);
             if (response6.ok) {
                 var data6 = await response6.json();
                 if (data6 && data6.ipAddress) {
@@ -955,7 +971,7 @@ async function fetchIPInfo() {
         var city = ipData.city || '--';
         var country = ipData.country || '--';
         if (city !== '--' || country !== '--') {
-            document.getElementById('ipLocation').textContent = city + ', ' + country;
+            document.getElementById('ipLocation').textContent = 'Location: ' + city + ', ' + country;
         } else {
             document.getElementById('ipLocation').textContent = 'Location: --';
         }
@@ -984,7 +1000,7 @@ function tryBrowserGeolocation() {
             function() {
                 console.warn('Geolocation denied or failed');
             },
-            { timeout: 5000 }
+            { timeout: APP_CONFIG.network.timeoutMs.default }
         );
     }
 }
@@ -1046,7 +1062,7 @@ async function fetchWeather(lat, lon, isAccurateCoords) {
 
     try {
         var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto';
-        var response = await fetchWithTimeout(url, {}, 8000);
+        var response = await fetchWithTimeout(url, {}, APP_CONFIG.network.timeoutMs.weather);
 
         if (!response.ok) throw new Error('Weather API returned ' + response.status);
 
@@ -1117,6 +1133,14 @@ function getWeatherEmoji(code) {
 // ===== HISTORY =====
 var HISTORY_KEY = 'netpulse-history';
 
+function safeParseJSON(value, fallback) {
+    try {
+        return JSON.parse(value);
+    } catch (err) {
+        return fallback;
+    }
+}
+
 function initHistory() {
     var historyBtn = document.getElementById('historyBtn');
     var historyPanel = document.getElementById('historyPanel');
@@ -1148,16 +1172,16 @@ function initHistory() {
 }
 
 function saveTestResult(result) {
-    var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    var history = safeParseJSON(localStorage.getItem(HISTORY_KEY) || '[]', []);
     history.unshift(result);
-    if (history.length > 20) history.pop();
+    if (history.length > APP_CONFIG.speedTest.maxHistoryItems) history.pop();
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
 function renderHistory() {
     var historyList = document.getElementById('historyList');
     var historyEmpty = document.getElementById('historyEmpty');
-    var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    var history = safeParseJSON(localStorage.getItem(HISTORY_KEY) || '[]', []);
 
     var existingItems = historyList.querySelectorAll('.history-item');
     existingItems.forEach(function(item) { item.remove(); });
